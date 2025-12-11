@@ -24,7 +24,25 @@ WhatsTask is a smart to-do and reminder engine that sends instant notifications 
 
 ## Setup
 
-(Will be filled later)
+After setting up the database and running migrations, you can seed the database with a demo user and sample todos:
+
+```bash
+npx prisma db seed
+```
+
+### Demo User
+
+The seed script creates a demo user with the following credentials:
+
+- **Email**: demo@prayangshu.com
+- **Password**: User123!
+
+This demo user includes 2-3 sample todos:
+- Daily lunch reminder at 1 PM
+- Weekly planning reminder on Sundays at 10 AM
+- One-time water reminder (10-15 minutes in the future)
+
+You can use these credentials to log in and explore the application. Running `npx prisma db seed` will create this user and sample todos if they don't already exist.
 
 ## Database Setup
 
