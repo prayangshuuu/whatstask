@@ -49,3 +49,31 @@ npx prisma migrate dev
 ```
 
 Note: Make sure to copy `.env.example` to `.env` and update it with your actual database credentials. Never commit `.env` files to version control.
+
+## Reminder Worker
+
+The reminder worker is a background process that checks for due reminders and sends WhatsApp notifications.
+
+### Running the Worker
+
+To process reminders, run the worker script:
+
+```bash
+npm run worker
+```
+
+The worker will:
+- Check for due reminders every 60 seconds
+- Process todos that are:
+  - Not completed
+  - Have a `remindAt` time that has passed
+  - Haven't been notified yet (or need re-notification)
+- Update `lastNotifiedAt` after processing
+- Handle repeat logic:
+  - **NONE**: One-time reminder (no rescheduling)
+  - **DAILY**: Reschedule for next day
+  - **WEEKLY**: Reschedule for next matching weekday
+
+### Future Integration
+
+Currently, the worker logs what would be sent. In the future, this worker will integrate with `whatsapp-web.js` to send real WhatsApp messages asynchronously. The worker is designed to be easily extended with actual WhatsApp sending functionality.
