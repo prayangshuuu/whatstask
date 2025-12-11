@@ -44,14 +44,16 @@ model Todo {
 }
 
 model WhatsAppSession {
-  id             String   @id @default(cuid())
-  user           User     @relation(fields: [userId], references: [id])
-  userId         String   @unique
+  id              String   @id @default(cuid())
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String   @unique
 
-  phoneNumber    String   // user's WhatsApp number like +8801...
-  status         String   // e.g., "disconnected", "qr_pending", "ready"
-  sessionData    String?  // optional, serialized session info (for future whatsapp-web.js integration)
+  phoneNumber     String   // user's WhatsApp number like +8801...
+  status          String   // "disconnected" | "connecting" | "qr_pending" | "ready" | "error"
+  sessionData     String?  // optional serialized session json (for whatsapp-web.js)
+  qrData          String?  // base64-encoded QR data URL for frontend
+  lastQrAt        DateTime?
   lastConnectedAt DateTime?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

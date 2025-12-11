@@ -68,6 +68,29 @@ npx prisma migrate dev
 
 Note: Make sure to copy `.env.example` to `.env` and update it with your actual database credentials. Never commit `.env` files to version control.
 
+## Database Models
+
+The application uses the following main models:
+
+### User
+- Stores user authentication information (email, password hash)
+- Each user can have multiple todos and one WhatsApp session
+
+### Todo
+- Stores reminder tasks with scheduling information
+- Supports one-time, daily, and weekly repeat patterns
+- Tracks completion status and last notification time
+
+### WhatsAppSession
+- Stores WhatsApp connection information for each user
+- Fields include:
+  - `status`: Connection status ("disconnected" | "connecting" | "qr_pending" | "ready" | "error")
+  - `qrData`: Base64-encoded QR code image data URL for frontend display
+  - `lastQrAt`: Timestamp when QR code was last generated
+  - `lastConnectedAt`: Timestamp when session was last successfully connected
+  - `sessionData`: Serialized session information for whatsapp-web.js integration
+- Each user can have exactly one WhatsApp session
+
 ## Reminder Worker
 
 The reminder worker is a background process that checks for due reminders and sends WhatsApp notifications.
