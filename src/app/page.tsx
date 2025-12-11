@@ -1,11 +1,8 @@
 import Link from "next/link";
-import { cookies } from "next/headers";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/currentUser";
 
 export default async function Home() {
-  const cookieStore = await cookies();
-  const token = cookieStore.get("auth-token")?.value;
-  const user = await getCurrentUser(token);
+  const user = await getCurrentUser();
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">

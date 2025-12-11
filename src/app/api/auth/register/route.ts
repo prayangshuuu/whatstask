@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
-import { createToken } from "@/lib/auth";
+import { hashPassword, signAuthToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -34,7 +33,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    const passwordHash = await hashPassword(password);
 
     // Create user
     const user = await prisma.user.create({
@@ -44,16 +43,16 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Create token
-    const token = await createToken(user.id);
+    // Generate JWT token
+    const token = await signAuthToken({ userId: user.id });
 
-    // Set cookie
+    // Set HTTP-only cookie
     const response = NextResponse.json(
-      { message: "User created successfully" },
+      { id: user.id, email: user.email },
       { status: 201 }
     );
 
-    response.cookies.set("auth-token", token, {
+    response.cookies.set("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",

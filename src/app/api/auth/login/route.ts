@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcrypt";
 import { prisma } from "@/lib/prisma";
-import { createToken } from "@/lib/auth";
+import { comparePassword, signAuthToken } from "@/lib/auth";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user
+    // Find user by email
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -26,8 +25,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password
-    const isValid = await bcrypt.compare(password, user.passwordHash);
+    // Compare password with bcrypt
+    const isValid = await comparePassword(password, user.passwordHash);
 
     if (!isValid) {
       return NextResponse.json(
@@ -36,16 +35,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Create token
-    const token = await createToken(user.id);
+    // Generate JWT and set in HTTP-only cookie
+    const token = await signAuthToken({ userId: user.id });
 
-    // Set cookie
     const response = NextResponse.json(
-      { message: "Login successful" },
+      { id: user.id, email: user.email },
       { status: 200 }
     );
 
-    response.cookies.set("auth-token", token, {
+    response.cookies.set("auth_token", token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
