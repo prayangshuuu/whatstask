@@ -17,12 +17,15 @@ interface Todo {
 
 const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
+type FilterType = "ALL" | "PENDING" | "COMPLETED";
+
 export default function TodosPage() {
   const router = useRouter();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<FilterType>("ALL");
   
   // Form state
   const [title, setTitle] = useState("");
@@ -212,18 +215,32 @@ export default function TodosPage() {
     });
   };
 
-  const formatRepeatType = (type: string) => {
+  const formatRepeatType = (type: string, repeatDays: string | null) => {
     switch (type) {
       case "NONE":
         return "One-time";
       case "DAILY":
         return "Daily";
       case "WEEKLY":
+        if (repeatDays) {
+          return `Weekly (${repeatDays})`;
+        }
         return "Weekly";
       default:
         return type;
     }
   };
+
+  // Filter todos based on selected filter
+  const filteredTodos = todos.filter((todo) => {
+    if (filter === "PENDING") {
+      return !todo.isCompleted;
+    }
+    if (filter === "COMPLETED") {
+      return todo.isCompleted;
+    }
+    return true; // ALL
+  });
 
   return (
     <div className="space-y-8">
@@ -343,168 +360,219 @@ export default function TodosPage() {
       {/* Todos List */}
       <div className="rounded-lg border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
         <div className="border-b border-zinc-200 px-6 py-4 dark:border-zinc-800">
-          <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
-            Your Todos
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
+              Your Todos
+            </h3>
+            {/* Filter Buttons */}
+            <div className="flex gap-2">
+              {(["ALL", "PENDING", "COMPLETED"] as FilterType[]).map((filterType) => (
+                <button
+                  key={filterType}
+                  onClick={() => setFilter(filterType)}
+                  className={`rounded-md border px-3 py-1 text-sm font-medium transition-colors ${
+                    filter === filterType
+                      ? "border-black bg-black text-white dark:border-white dark:bg-white dark:text-black"
+                      : "border-zinc-300 bg-white text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700"
+                  }`}
+                >
+                  {filterType}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
 
         {loading ? (
           <div className="p-8 text-center text-zinc-600 dark:text-zinc-400">
             Loading...
           </div>
-        ) : todos.length === 0 ? (
+        ) : filteredTodos.length === 0 ? (
           <div className="p-8 text-center text-zinc-600 dark:text-zinc-400">
-            No todos yet. Create your first one above!
+            {todos.length === 0
+              ? "No todos yet. Create your first one above!"
+              : `No ${filter.toLowerCase()} todos.`}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-zinc-50 dark:bg-zinc-800/50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Title
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Next Reminder
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Repeat Type
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 bg-white dark:divide-zinc-800 dark:bg-zinc-900">
-                {todos.map((todo) => (
-                  <tr
-                    key={todo.id}
-                    className={todo.isCompleted ? "opacity-60" : ""}
-                  >
-                    <td className="whitespace-nowrap px-6 py-4">
-                      <div className="text-sm font-medium text-black dark:text-zinc-50">
-                        {todo.title}
-                      </div>
-                      {todo.description && (
-                        <div className="text-xs text-zinc-500 dark:text-zinc-400">
-                          {todo.description}
-                        </div>
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
-                      {editingId === todo.id ? (
-                        <input
-                          type="datetime-local"
-                          value={editRemindAt}
-                          onChange={(e) => setEditRemindAt(e.target.value)}
-                          className="rounded-md border border-zinc-300 px-2 py-1 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
-                        />
-                      ) : (
-                        formatDate(todo.remindAt)
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm text-zinc-600 dark:text-zinc-400">
-                      {editingId === todo.id ? (
-                        <div className="space-y-2">
-                          <select
-                            value={editRepeatType}
-                            onChange={(e) => {
-                              setEditRepeatType(
-                                e.target.value as "NONE" | "DAILY" | "WEEKLY"
-                              );
-                              if (e.target.value !== "WEEKLY")
-                                setEditSelectedDays([]);
-                            }}
-                            className="rounded-md border border-zinc-300 px-2 py-1 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
-                          >
-                            <option value="NONE">One-time</option>
-                            <option value="DAILY">Daily</option>
-                            <option value="WEEKLY">Weekly</option>
-                          </select>
-                          {editRepeatType === "WEEKLY" && (
-                            <div className="flex flex-wrap gap-1">
-                              {DAYS.map((day) => (
-                                <label
-                                  key={day}
-                                  className="flex items-center gap-1 cursor-pointer"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={editSelectedDays.includes(day)}
-                                    onChange={() => toggleDay(day, true)}
-                                    className="rounded border-zinc-300 text-black focus:ring-black dark:border-zinc-600 dark:bg-zinc-800"
-                                  />
-                                  <span className="text-xs text-zinc-700 dark:text-zinc-300">
-                                    {day}
-                                  </span>
-                                </label>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        formatRepeatType(todo.repeatType)
-                      )}
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-1 text-xs font-medium ${
+          <div className="divide-y divide-zinc-200 dark:divide-zinc-800">
+            {filteredTodos.map((todo) => (
+              <div
+                key={todo.id}
+                className={`px-6 py-4 transition-colors ${
+                  todo.isCompleted
+                    ? "bg-zinc-50/50 dark:bg-zinc-900/50"
+                    : "bg-white dark:bg-zinc-900"
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-3">
+                      {/* Complete Checkbox */}
+                      <button
+                        onClick={() =>
+                          handleToggleComplete(todo.id, todo.isCompleted)
+                        }
+                        className={`mt-1 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
                           todo.isCompleted
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
-                            : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                            ? "border-green-500 bg-green-500"
+                            : "border-zinc-300 dark:border-zinc-600"
                         }`}
                       >
-                        {todo.isCompleted ? "Completed" : "Pending"}
-                      </span>
-                    </td>
-                    <td className="whitespace-nowrap px-6 py-4 text-sm font-medium">
-                      {editingId === todo.id ? (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => handleSaveEdit(todo.id)}
-                            className="text-green-600 hover:text-green-900 dark:text-green-400 dark:hover:text-green-300"
+                        {todo.isCompleted && (
+                          <svg
+                            className="h-3 w-3 text-white"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="currentColor"
                           >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-300"
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M5 13l4 4L19 7"
+                            />
+                          </svg>
+                        )}
+                      </button>
+                      <div className="flex-1 min-w-0">
+                        <h4
+                          className={`text-sm font-semibold ${
+                            todo.isCompleted
+                              ? "line-through text-zinc-500 dark:text-zinc-500"
+                              : "text-black dark:text-zinc-50"
+                          }`}
+                        >
+                          {todo.title}
+                        </h4>
+                        {todo.description && (
+                          <p
+                            className={`mt-1 text-xs ${
+                              todo.isCompleted
+                                ? "text-zinc-400 dark:text-zinc-600"
+                                : "text-zinc-600 dark:text-zinc-400"
+                            }`}
                           >
-                            Cancel
-                          </button>
+                            {todo.description}
+                          </p>
+                        )}
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
+                          <span className="text-zinc-500 dark:text-zinc-500">
+                            {formatDate(todo.remindAt)}
+                          </span>
+                          <span className="text-zinc-400 dark:text-zinc-600">•</span>
+                          <span className="text-zinc-500 dark:text-zinc-500">
+                            {formatRepeatType(todo.repeatType, todo.repeatDays)}
+                          </span>
+                          <span
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              todo.isCompleted
+                                ? "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-400"
+                                : "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400"
+                            }`}
+                          >
+                            {todo.isCompleted ? "Completed" : "Pending"}
+                          </span>
                         </div>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() =>
-                              handleToggleComplete(todo.id, todo.isCompleted)
-                            }
-                            className="text-blue-600 hover:text-blue-900 dark:text-blue-400 dark:hover:text-blue-300"
-                          >
-                            {todo.isCompleted ? "Uncomplete" : "Complete"}
-                          </button>
-                          <button
-                            onClick={() => startEdit(todo)}
-                            className="text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-300"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDelete(todo.id)}
-                            className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-                          >
-                            Delete
-                          </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-2">
+                    {editingId === todo.id ? (
+                      <>
+                        <button
+                          onClick={() => handleSaveEdit(todo.id)}
+                          className="rounded-md bg-green-600 px-3 py-1 text-xs font-medium text-white hover:bg-green-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={cancelEdit}
+                          className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          Cancel
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => startEdit(todo)}
+                          className="rounded-md border border-zinc-300 px-3 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(todo.id)}
+                          className="rounded-md bg-red-600 px-3 py-1 text-xs font-medium text-white hover:bg-red-700"
+                        >
+                          Delete
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
+                {/* Edit Form (shown inline when editing) */}
+                {editingId === todo.id && (
+                  <div className="mt-4 space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50">
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        Reminder Date & Time
+                      </label>
+                      <input
+                        type="datetime-local"
+                        value={editRemindAt}
+                        onChange={(e) => setEditRemindAt(e.target.value)}
+                        className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                        Repeat Type
+                      </label>
+                      <select
+                        value={editRepeatType}
+                        onChange={(e) => {
+                          setEditRepeatType(
+                            e.target.value as "NONE" | "DAILY" | "WEEKLY"
+                          );
+                          if (e.target.value !== "WEEKLY")
+                            setEditSelectedDays([]);
+                        }}
+                        className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+                      >
+                        <option value="NONE">One-time</option>
+                        <option value="DAILY">Daily</option>
+                        <option value="WEEKLY">Weekly</option>
+                      </select>
+                    </div>
+                    {editRepeatType === "WEEKLY" && (
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                          Select Days
+                        </label>
+                        <div className="flex flex-wrap gap-2">
+                          {DAYS.map((day) => (
+                            <label
+                              key={day}
+                              className="flex items-center gap-2 cursor-pointer"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={editSelectedDays.includes(day)}
+                                onChange={() => toggleDay(day, true)}
+                                className="rounded border-zinc-300 text-black focus:ring-black dark:border-zinc-600 dark:bg-zinc-800"
+                              />
+                              <span className="text-xs text-zinc-700 dark:text-zinc-300">
+                                {day}
+                              </span>
+                            </label>
+                          ))}
                         </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

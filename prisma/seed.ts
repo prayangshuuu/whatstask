@@ -1,7 +1,7 @@
 import { PrismaClient, RepeatType } from "@prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
-import bcrypt from "bcrypt";
+import * as bcrypt from "bcrypt";
 import * as dotenv from "dotenv";
 
 // Load environment variables
