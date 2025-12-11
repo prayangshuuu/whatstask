@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { formatDateTime } from "@/lib/formatDate";
 
 interface Todo {
   id: string;
@@ -11,6 +12,7 @@ interface Todo {
   repeatType: "NONE" | "DAILY" | "WEEKLY";
   repeatDays: string | null;
   isCompleted: boolean;
+  lastNotifiedAt: string | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -218,15 +220,12 @@ export default function TodosPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+  // Check if reminder has already fired
+  const hasAlreadyFired = (todo: Todo): boolean => {
+    if (!todo.lastNotifiedAt) return false;
+    const lastNotified = new Date(todo.lastNotifiedAt);
+    const remindAt = new Date(todo.remindAt);
+    return lastNotified >= remindAt;
   };
 
   const formatRepeatType = (type: string, repeatDays: string | null) => {
@@ -471,12 +470,9 @@ export default function TodosPage() {
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
                           <span className="text-zinc-500 dark:text-zinc-500">
-                            {formatDate(todo.remindAt)}
-                          </span>
-                          <span className="text-zinc-400 dark:text-zinc-600">•</span>
-                          <span className="text-zinc-500 dark:text-zinc-500">
                             {formatRepeatType(todo.repeatType, todo.repeatDays)}
                           </span>
+                          <span className="text-zinc-400 dark:text-zinc-600">•</span>
                           <span
                             className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                               todo.isCompleted
@@ -486,6 +482,19 @@ export default function TodosPage() {
                           >
                             {todo.isCompleted ? "Completed" : "Pending"}
                           </span>
+                        </div>
+                        <div className="mt-2 text-xs">
+                          <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                            Next run:
+                          </span>{" "}
+                          <span className="text-zinc-600 dark:text-zinc-400">
+                            {formatDateTime(todo.remindAt)}
+                          </span>
+                          {hasAlreadyFired(todo) && !todo.isCompleted && (
+                            <span className="ml-2 text-xs text-zinc-500 dark:text-zinc-500">
+                              (Already fired, waiting reschedule)
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
