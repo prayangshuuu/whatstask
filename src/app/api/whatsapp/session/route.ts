@@ -19,6 +19,8 @@ export async function GET() {
         id: true,
         phoneNumber: true,
         status: true,
+        qrData: true,
+        lastQrAt: true,
         lastConnectedAt: true,
         createdAt: true,
         updatedAt: true,
@@ -69,21 +71,26 @@ export async function POST(request: NextRequest) {
     }
 
     // Upsert: create if doesn't exist, update if exists
+    // Set status to "connecting" to trigger worker to start client
     const session = await prisma.whatsAppSession.upsert({
       where: { userId: user.id },
       update: {
         phoneNumber,
-        status: "disconnected",
+        status: "connecting",
+        qrData: null, // Clear any existing QR code
       },
       create: {
         userId: user.id,
         phoneNumber,
-        status: "disconnected",
+        status: "connecting",
+        qrData: null,
       },
       select: {
         id: true,
         phoneNumber: true,
         status: true,
+        qrData: true,
+        lastQrAt: true,
         lastConnectedAt: true,
         createdAt: true,
         updatedAt: true,
