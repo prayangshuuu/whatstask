@@ -1,5 +1,6 @@
 import * as dotenv from "dotenv";
 import { prisma } from "../src/lib/prisma";
+import { startWhatsAppClientForUser } from "./whatsappClientManager";
 
 // Load environment variables
 dotenv.config();
@@ -68,6 +69,84 @@ function getNextWeeklyReminderDate(
   fallback.setDate(fallback.getDate() + 7);
   fallback.setHours(hours, minutes, seconds, 0);
   return fallback;
+}
+
+/**
+ * Sync WhatsApp clients for active sessions.
+ * Ensures that sessions with status "connecting", "qr_pending", or "ready" have active clients.
+ */
+async function syncWhatsAppClients(): Promise<void> {
+  const startTime = new Date();
+  console.log(
+    `[Worker] [${startTime.toISOString()}] Starting WhatsApp client sync...`
+  );
+
+  try {
+    // Fetch all WhatsAppSession rows that should have active clients
+    const activeSessions = await prisma.whatsAppSession.findMany({
+      where: {
+        status: {
+          in: ["connecting", "qr_pending", "ready"],
+        },
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    console.log(
+      `[Worker] Found ${activeSessions.length} active WhatsApp session(s) to sync`
+    );
+
+    const userIds: string[] = [];
+    for (const session of activeSessions) {
+      userIds.push(session.userId);
+      console.log(
+        `[Worker] Syncing client for user ${session.userId} (${session.user.email}) - Status: ${session.status}, Phone: ${session.phoneNumber}`
+      );
+
+      try {
+        await startWhatsAppClientForUser(session.userId);
+        console.log(
+          `[Worker] ✅ Client initialized/refreshed for user ${session.userId}`
+        );
+      } catch (error) {
+        console.error(
+          `[Worker] ❌ Error starting client for user ${session.userId}:`,
+          error
+        );
+
+        // Optionally set status to error in database
+        try {
+          await prisma.whatsAppSession.update({
+            where: { userId: session.userId },
+            data: { status: "error" },
+          });
+        } catch (dbError) {
+          console.error(
+            `[Worker] Failed to update status to error for user ${session.userId}:`,
+            dbError
+          );
+        }
+      }
+    }
+
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    console.log(
+      `[Worker] [${endTime.toISOString()}] Finished syncing WhatsApp clients (took ${duration}ms) - Processed ${userIds.length} session(s)`
+    );
+  } catch (error) {
+    console.error(
+      `[Worker] [${new Date().toISOString()}] Error syncing WhatsApp clients:`,
+      error
+    );
+  }
 }
 
 /**
@@ -220,21 +299,24 @@ async function processDueReminders(): Promise<void> {
 
 /**
  * Start the reminder worker.
- * Runs processDueReminders() every 60 seconds.
+ * Runs syncWhatsAppClients() and processDueReminders() every 60 seconds.
  */
 export function startWorker(): void {
   console.log("[Worker] =========================================");
   console.log("[Worker] Reminder worker started");
   console.log("[Worker] Polling every 60 seconds");
+  console.log("[Worker] Tasks: WhatsApp client sync + Reminder processing");
   console.log(`[Worker] Started at: ${new Date().toISOString()}`);
   console.log("[Worker] =========================================");
 
   // Run immediately on startup
+  syncWhatsAppClients();
   processDueReminders();
 
   // Then run every 60 seconds
-  setInterval(() => {
-    processDueReminders();
+  setInterval(async () => {
+    await syncWhatsAppClients();
+    await processDueReminders();
   }, 60 * 1000);
 }
 

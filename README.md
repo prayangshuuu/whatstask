@@ -104,8 +104,10 @@ npm run worker
 ```
 
 The worker will:
-- Start immediately and check for due reminders
-- Poll every 60 seconds for new due reminders
+- Start immediately and sync WhatsApp clients, then check for due reminders
+- Poll every 60 seconds to:
+  1. Sync WhatsApp sessions and start/restart clients
+  2. Process due reminders
 - Log which reminders are being processed with detailed information:
   - User email
   - Phone number (if WhatsApp session exists)
@@ -122,6 +124,23 @@ The worker will:
   - **WEEKLY**: Reschedule for next matching weekday (preserves time-of-day)
     - If `repeatDays` is provided (e.g., "SUN,MON"), finds next matching day
     - If not provided, treats as same weekday next week
+
+### WhatsApp Session Sync
+
+The worker automatically manages WhatsApp client connections:
+
+- **Automatic Client Management**: Every 60 seconds, the worker checks for WhatsAppSession rows with status `"connecting"`, `"qr_pending"`, or `"ready"` and ensures they have active whatsapp-web.js clients
+- **QR Code Generation**: When a session has status `"connecting"`, the worker starts a client which generates a QR code. On QR event:
+  - `status` is set to `"qr_pending"`
+  - `qrData` is stored as a base64-encoded image data URL
+  - `lastQrAt` is updated
+- **Connection Ready**: When the client successfully connects:
+  - `status` is set to `"ready"`
+  - `qrData` is cleared
+  - `lastConnectedAt` is updated
+- **Error Handling**: If client initialization fails, `status` is set to `"error"`
+
+**Important**: The worker must be running (`npm run worker`) for WhatsApp clients to be initialized and QR codes to be generated. When a user sets their WhatsAppSession status to `"connecting"` (via the API), the worker will pick it up on the next sync cycle and start the client.
 
 ### Logging
 
