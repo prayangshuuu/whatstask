@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
 import { RepeatType } from "@prisma/client";
+import { todoCreateSchema } from "@/lib/validation";
 
 export async function GET() {
   try {
@@ -41,38 +42,27 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, description, remindAt, repeatType, repeatDays } = body;
 
-    // Validation
-    if (!title || !remindAt) {
+    // Validate request body
+    const validationResult = todoCreateSchema.safeParse(body);
+    if (!validationResult.success) {
       return NextResponse.json(
-        { error: "Title and remindAt are required" },
+        {
+          error: "Validation error",
+          details: validationResult.error.issues.map((err) => ({
+            path: err.path.join("."),
+            message: err.message,
+          })),
+        },
         { status: 400 }
       );
     }
 
-    if (!["NONE", "DAILY", "WEEKLY"].includes(repeatType)) {
-      return NextResponse.json(
-        { error: "repeatType must be NONE, DAILY, or WEEKLY" },
-        { status: 400 }
-      );
-    }
+    const { title, description, remindAt, repeatType, repeatDays } =
+      validationResult.data;
 
-    if (repeatType === "WEEKLY" && !repeatDays) {
-      return NextResponse.json(
-        { error: "repeatDays is required when repeatType is WEEKLY" },
-        { status: 400 }
-      );
-    }
-
-    // Parse remindAt as ISO string
+    // Convert remindAt string to Date
     const remindAtDate = new Date(remindAt);
-    if (isNaN(remindAtDate.getTime())) {
-      return NextResponse.json(
-        { error: "Invalid remindAt date format" },
-        { status: 400 }
-      );
-    }
 
     const todo = await prisma.todo.create({
       data: {

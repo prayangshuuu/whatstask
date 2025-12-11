@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
 import { RepeatType } from "@prisma/client";
+import { todoUpdateSchema } from "@/lib/validation";
 
 export async function GET(
   request: NextRequest,
@@ -75,6 +76,23 @@ export async function PATCH(
       );
     }
 
+    // Validate request body
+    const validationResult = todoUpdateSchema.safeParse(body);
+    if (!validationResult.success) {
+      return NextResponse.json(
+        {
+          error: "Validation error",
+          details: validationResult.error.issues.map((err) => ({
+            path: err.path.join("."),
+            message: err.message,
+          })),
+        },
+        { status: 400 }
+      );
+    }
+
+    const validatedData = validationResult.data;
+
     // Build update data, excluding lastNotifiedAt
     const updateData: {
       title?: string;
@@ -85,41 +103,29 @@ export async function PATCH(
       isCompleted?: boolean;
     } = {};
 
-    if (body.title !== undefined) {
-      updateData.title = body.title;
+    if (validatedData.title !== undefined) {
+      updateData.title = validatedData.title;
     }
 
-    if (body.description !== undefined) {
-      updateData.description = body.description || null;
+    if (validatedData.description !== undefined) {
+      updateData.description = validatedData.description || null;
     }
 
-    if (body.remindAt !== undefined) {
-      const remindAtDate = new Date(body.remindAt);
-      if (isNaN(remindAtDate.getTime())) {
-        return NextResponse.json(
-          { error: "Invalid remindAt date format" },
-          { status: 400 }
-        );
-      }
-      updateData.remindAt = remindAtDate;
+    if (validatedData.remindAt !== undefined) {
+      // Convert remindAt string to Date
+      updateData.remindAt = new Date(validatedData.remindAt);
     }
 
-    if (body.repeatType !== undefined) {
-      if (!["NONE", "DAILY", "WEEKLY"].includes(body.repeatType)) {
-        return NextResponse.json(
-          { error: "repeatType must be NONE, DAILY, or WEEKLY" },
-          { status: 400 }
-        );
-      }
-      updateData.repeatType = body.repeatType as RepeatType;
+    if (validatedData.repeatType !== undefined) {
+      updateData.repeatType = validatedData.repeatType as RepeatType;
     }
 
-    if (body.repeatDays !== undefined) {
-      updateData.repeatDays = body.repeatDays || null;
+    if (validatedData.repeatDays !== undefined) {
+      updateData.repeatDays = validatedData.repeatDays || null;
     }
 
-    if (body.isCompleted !== undefined) {
-      updateData.isCompleted = Boolean(body.isCompleted);
+    if (validatedData.isCompleted !== undefined) {
+      updateData.isCompleted = validatedData.isCompleted;
     }
 
     const updatedTodo = await prisma.todo.update({

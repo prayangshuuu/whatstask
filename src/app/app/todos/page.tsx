@@ -96,6 +96,10 @@ export default function TodosPage() {
 
       if (!response.ok) {
         const data = await response.json();
+        // Handle validation errors
+        if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+          throw new Error(data.details[0].message || data.error || "Validation failed");
+        }
         throw new Error(data.error || "Failed to create todo");
       }
 
@@ -123,11 +127,14 @@ export default function TodosPage() {
         body: JSON.stringify({ isCompleted: !currentStatus }),
       });
 
-      if (!response.ok) throw new Error("Failed to update todo");
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to update todo");
+      }
 
       await fetchTodos();
     } catch (err) {
-      setError("Failed to update todo");
+      setError(err instanceof Error ? err.message : "Failed to update todo");
     }
   };
 
@@ -183,12 +190,19 @@ export default function TodosPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to update todo");
+      if (!response.ok) {
+        const data = await response.json();
+        // Handle validation errors
+        if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+          throw new Error(data.details[0].message || data.error || "Validation failed");
+        }
+        throw new Error(data.error || "Failed to update todo");
+      }
 
       cancelEdit();
       await fetchTodos();
     } catch (err) {
-      setError("Failed to update todo");
+      setError(err instanceof Error ? err.message : "Failed to update todo");
     }
   };
 

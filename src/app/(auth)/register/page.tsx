@@ -27,13 +27,18 @@ export default function RegisterPage() {
       const response = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, confirmPassword }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Registration failed");
+        // Handle validation errors
+        if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+          setError(data.details[0].message || data.error || "Validation failed");
+        } else {
+          setError(data.error || "Registration failed");
+        }
         setIsLoading(false);
         return;
       }

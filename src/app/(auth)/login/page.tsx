@@ -26,7 +26,12 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || "Login failed");
+        // Handle validation errors
+        if (data.details && Array.isArray(data.details) && data.details.length > 0) {
+          setError(data.details[0].message || data.error || "Validation failed");
+        } else {
+          setError(data.error || "Login failed");
+        }
         setIsLoading(false);
         return;
       }
