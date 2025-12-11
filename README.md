@@ -25,3 +25,27 @@ WhatsTask is a smart to-do and reminder engine that sends instant notifications 
 ## Setup
 
 (Will be filled later)
+
+## Database Setup
+
+To set up the PostgreSQL database, run the following SQL commands:
+
+```sql
+CREATE DATABASE whatstask;
+CREATE USER whatstaask WITH PASSWORD 'IDk421@!';
+GRANT ALL PRIVILEGES ON DATABASE whatstask TO whatstaask;
+```
+
+After creating the database, configure your `.env` file with the connection string (note: special characters in the password need to be URL encoded):
+
+```
+DATABASE_URL="postgresql://whatstaask:IDk421%40%21@localhost:5432/whatstask?schema=public"
+```
+
+Then run Prisma migrations:
+
+```bash
+npx prisma migrate dev
+```
+
+Note: Make sure to copy `.env.example` to `.env` and update it with your actual database credentials. Never commit `.env` files to version control.
