@@ -257,17 +257,49 @@ async function processDueReminders(): Promise<void> {
         message
       );
 
-      if (!sendSuccess) {
-        console.error(
-          `[Worker] ❌ Failed to send WhatsApp reminder for todo "${todo.title}" (ID: ${todo.id})`
-        );
-        // Continue to next todo without updating lastNotifiedAt
-        continue;
-      }
+      const sentAt = new Date();
 
-      console.log(
-        `[Worker] ✅ Successfully sent reminder for todo "${todo.title}" (ID: ${todo.id})`
-      );
+      // Create reminder log
+      try {
+        if (sendSuccess) {
+          await prisma.reminderLog.create({
+            data: {
+              userId: todo.userId,
+              todoId: todo.id,
+              sentAt,
+              status: "success",
+              errorMsg: null,
+            },
+          });
+          console.log(
+            `[Worker] ✅ Successfully sent reminder for todo "${todo.title}" (ID: ${todo.id})`
+          );
+        } else {
+          await prisma.reminderLog.create({
+            data: {
+              userId: todo.userId,
+              todoId: todo.id,
+              sentAt,
+              status: "failed",
+              errorMsg: "Failed to send WhatsApp message",
+            },
+          });
+          console.error(
+            `[Worker] ❌ Failed to send WhatsApp reminder for todo "${todo.title}" (ID: ${todo.id})`
+          );
+          // Continue to next todo without updating lastNotifiedAt
+          continue;
+        }
+      } catch (logError) {
+        console.error(
+          `[Worker] Error creating reminder log for todo ${todo.id}:`,
+          logError
+        );
+        // Continue processing even if log creation fails
+        if (!sendSuccess) {
+          continue;
+        }
+      }
 
       // Update lastNotifiedAt
       const updatedAt = new Date();
