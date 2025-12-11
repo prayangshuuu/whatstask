@@ -1,24 +1,39 @@
 import * as dotenv from "dotenv";
 import { prisma } from "../src/lib/prisma";
-import { startWhatsAppClientForUser } from "./whatsappClientManager";
+import { startWhatsAppClientForUser, getWhatsAppClientForUser } from "./whatsappClientManager";
+import { Client } from "whatsapp-web.js";
 
 // Load environment variables
 dotenv.config();
 
 /**
- * Placeholder function for sending WhatsApp messages.
- * TODO: integrate whatsapp-web.js here to send real WhatsApp messages asynchronously.
+ * Normalize phone number to WhatsApp JID format.
+ * Converts phone number like "+8801234567890" to "8801234567890@c.us"
+ * TODO: Add better normalization (handle country codes, remove spaces/dashes, etc.)
+ */
+function normalizePhoneToJid(phoneNumber: string): string {
+  // Remove all non-digit characters and add @c.us suffix
+  const digitsOnly = phoneNumber.replace(/[^0-9]/g, "");
+  return `${digitsOnly}@c.us`;
+}
+
+/**
+ * Send WhatsApp message using whatsapp-web.js client.
+ * Returns true if message was sent successfully, false otherwise.
  */
 async function sendWhatsAppMessage(
+  client: Client,
   phoneNumber: string,
   message: string
-): Promise<void> {
-  // For now, just log what would be sent
-  console.log(`[WhatsApp] Would send message to ${phoneNumber}: ${message}`);
-  
-  // Future implementation:
-  // const client = getWhatsAppClient(userId);
-  // await client.sendMessage(phoneNumber, message);
+): Promise<boolean> {
+  try {
+    const jid = normalizePhoneToJid(phoneNumber);
+    await client.sendMessage(jid, message);
+    return true;
+  } catch (error) {
+    console.error(`[WhatsApp] Error sending message to ${phoneNumber}:`, error);
+    return false;
+  }
 }
 
 /**
@@ -216,18 +231,43 @@ async function processDueReminders(): Promise<void> {
         continue;
       }
 
-      // Prepare reminder message
-      const message = `Reminder: ${todo.title}${
-        todo.description ? `\n${todo.description}` : ""
-      }`;
+      // Get the WhatsApp client for this user
+      const client = getWhatsAppClientForUser(todo.userId);
+      if (!client) {
+        console.warn(
+          `[Worker] ⚠️  No active WhatsApp client for user ${user.email}, todo "${todo.title}". Client may not be initialized yet.`
+        );
+        continue;
+      }
 
-      // Log what would be sent (for now)
+      // Prepare reminder message
+      const message = `⏰ Reminder: ${todo.title}${
+        todo.description ? `\n\n${todo.description}` : ""
+      }\n\nSent via WhatsTask`;
+
+      // Log before sending
       console.log(
-        `[Worker] ✅ Would send WhatsApp reminder to ${whatsappSession.phoneNumber} for todo "${todo.title}"`
+        `[Worker] 📤 Sending WhatsApp reminder for user ${user.email}, todo "${todo.title}" to ${whatsappSession.phoneNumber}`
       );
 
-      // TODO: Actually send WhatsApp message
-      await sendWhatsAppMessage(whatsappSession.phoneNumber, message);
+      // Send WhatsApp message
+      const sendSuccess = await sendWhatsAppMessage(
+        client,
+        whatsappSession.phoneNumber,
+        message
+      );
+
+      if (!sendSuccess) {
+        console.error(
+          `[Worker] ❌ Failed to send WhatsApp reminder for todo "${todo.title}" (ID: ${todo.id})`
+        );
+        // Continue to next todo without updating lastNotifiedAt
+        continue;
+      }
+
+      console.log(
+        `[Worker] ✅ Successfully sent reminder for todo "${todo.title}" (ID: ${todo.id})`
+      );
 
       // Update lastNotifiedAt
       const updatedAt = new Date();
