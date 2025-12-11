@@ -74,24 +74,40 @@ The reminder worker is a background process that checks for due reminders and se
 
 ### Running the Worker
 
-To process reminders, run the worker script:
+To start the reminder processor, run:
 
 ```bash
 npm run worker
 ```
 
 The worker will:
-- Check for due reminders every 60 seconds
+- Start immediately and check for due reminders
+- Poll every 60 seconds for new due reminders
+- Log which reminders are being processed with detailed information:
+  - User email
+  - Phone number (if WhatsApp session exists)
+  - Todo title and reminder time
+  - Repeat type and schedule
 - Process todos that are:
   - Not completed
   - Have a `remindAt` time that has passed
   - Haven't been notified yet (or need re-notification)
 - Update `lastNotifiedAt` after processing
 - Handle repeat logic:
-  - **NONE**: One-time reminder (no rescheduling)
-  - **DAILY**: Reschedule for next day
-  - **WEEKLY**: Reschedule for next matching weekday
+  - **NONE**: One-time reminder (no rescheduling, only updates `lastNotifiedAt`)
+  - **DAILY**: Reschedule for next day at the same time
+  - **WEEKLY**: Reschedule for next matching weekday (preserves time-of-day)
+    - If `repeatDays` is provided (e.g., "SUN,MON"), finds next matching day
+    - If not provided, treats as same weekday next week
+
+### Logging
+
+The worker provides detailed logging:
+- Timestamped log entries for each processing cycle
+- Clear warnings when WhatsApp sessions are missing or not ready
+- Success messages when reminders would be sent
+- Processing duration metrics
 
 ### Future Integration
 
-Currently, the worker logs what would be sent. In the future, this worker will integrate with `whatsapp-web.js` to send real WhatsApp messages asynchronously. The worker is designed to be easily extended with actual WhatsApp sending functionality.
+Currently, the worker logs what would be sent (e.g., "Would send WhatsApp reminder to +1234567890 for todo 'Eat lunch'"). A future step is to plug in `whatsapp-web.js` to actually send WhatsApp messages where logs currently say "would send". The worker is designed to be easily extended with actual WhatsApp sending functionality.

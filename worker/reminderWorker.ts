@@ -1,20 +1,8 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { Pool } from "pg";
 import * as dotenv from "dotenv";
+import { prisma } from "../src/lib/prisma";
 
 // Load environment variables
 dotenv.config();
-
-// Create Prisma client for worker (separate from Next.js app)
-const connectionString = process.env.DATABASE_URL!;
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-
-const prisma = new PrismaClient({
-  adapter,
-  log: ["error", "warn"],
-});
 
 /**
  * Placeholder function for sending WhatsApp messages.
@@ -35,6 +23,7 @@ async function sendWhatsAppMessage(
 /**
  * Calculate the next reminder date for a weekly repeat pattern.
  * Returns the next date that matches one of the specified days.
+ * Preserves the time-of-day from currentRemindAt.
  */
 function getNextWeeklyReminderDate(
   currentRemindAt: Date,
@@ -53,9 +42,15 @@ function getNextWeeklyReminderDate(
 
   const now = new Date();
   const nextDate = new Date(currentRemindAt);
+  
+  // Preserve the time-of-day from currentRemindAt
+  const hours = currentRemindAt.getHours();
+  const minutes = currentRemindAt.getMinutes();
+  const seconds = currentRemindAt.getSeconds();
 
   // Start from tomorrow
   nextDate.setDate(nextDate.getDate() + 1);
+  nextDate.setHours(hours, minutes, seconds, 0);
 
   // Find the next matching day within the next 14 days
   for (let i = 0; i < 14; i++) {
@@ -69,13 +64,21 @@ function getNextWeeklyReminderDate(
   }
 
   // Fallback: if no match found, add 7 days
-  return new Date(currentRemindAt.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const fallback = new Date(currentRemindAt);
+  fallback.setDate(fallback.getDate() + 7);
+  fallback.setHours(hours, minutes, seconds, 0);
+  return fallback;
 }
 
 /**
  * Process all due reminders and send notifications.
  */
 async function processDueReminders(): Promise<void> {
+  const startTime = new Date();
+  console.log(
+    `[Worker] [${startTime.toISOString()}] Starting reminder processing...`
+  );
+
   try {
     const now = new Date();
 
@@ -105,16 +108,23 @@ async function processDueReminders(): Promise<void> {
         new Date(todo.lastNotifiedAt) < new Date(todo.remindAt)
     );
 
-    console.log(`[Worker] Found ${dueTodos.length} due reminder(s)`);
+    console.log(
+      `[Worker] [${now.toISOString()}] Found ${dueTodos.length} due reminder(s) out of ${candidateTodos.length} candidate(s)`
+    );
 
     for (const todo of dueTodos) {
       const { user } = todo;
       const whatsappSession = user.whatsappSession;
 
+      // Log todo details
+      console.log(
+        `[Worker] Processing todo: "${todo.title}" (User: ${user.email}, RemindAt: ${todo.remindAt.toISOString()}, RepeatType: ${todo.repeatType}${todo.repeatDays ? `, Days: ${todo.repeatDays}` : ""})`
+      );
+
       // Check if user has WhatsApp session configured
       if (!whatsappSession) {
         console.warn(
-          `[Worker] Skipping todo "${todo.title}" - User ${user.email} has no WhatsApp session`
+          `[Worker] ⚠️  Skipping todo "${todo.title}" - User ${user.email} has no WhatsApp session configured`
         );
         continue;
       }
@@ -122,7 +132,7 @@ async function processDueReminders(): Promise<void> {
       // Check if WhatsApp session is ready
       if (whatsappSession.status !== "ready") {
         console.warn(
-          `[Worker] Skipping todo "${todo.title}" - WhatsApp session status is "${whatsappSession.status}" (not ready)`
+          `[Worker] ⚠️  Skipping todo "${todo.title}" - WhatsApp session status is "${whatsappSession.status}" (not ready). Phone: ${whatsappSession.phoneNumber}`
         );
         continue;
       }
@@ -134,7 +144,7 @@ async function processDueReminders(): Promise<void> {
 
       // Log what would be sent (for now)
       console.log(
-        `[Worker] Would send WhatsApp reminder to ${whatsappSession.phoneNumber} for todo "${todo.title}" at ${todo.remindAt.toISOString()}`
+        `[Worker] ✅ Would send WhatsApp reminder to ${whatsappSession.phoneNumber} for todo "${todo.title}"`
       );
 
       // TODO: Actually send WhatsApp message
@@ -153,7 +163,7 @@ async function processDueReminders(): Promise<void> {
           break;
 
         case "DAILY":
-          // Set remindAt to tomorrow
+          // Set remindAt to tomorrow at the same time
           nextRemindAt = new Date(todo.remindAt);
           nextRemindAt.setDate(nextRemindAt.getDate() + 1);
           break;
@@ -166,7 +176,7 @@ async function processDueReminders(): Promise<void> {
               todo.repeatDays
             );
           } else {
-            // If no repeatDays specified, treat as every 7 days
+            // If no repeatDays specified, treat as same weekday next week
             nextRemindAt = new Date(todo.remindAt);
             nextRemindAt.setDate(nextRemindAt.getDate() + 7);
           }
@@ -174,7 +184,7 @@ async function processDueReminders(): Promise<void> {
 
         default:
           console.warn(
-            `[Worker] Unknown repeat type "${todo.repeatType}" for todo "${todo.title}"`
+            `[Worker] ⚠️  Unknown repeat type "${todo.repeatType}" for todo "${todo.title}"`
           );
           nextRemindAt = undefined;
       }
@@ -189,13 +199,22 @@ async function processDueReminders(): Promise<void> {
       });
 
       console.log(
-        `[Worker] Updated todo "${todo.title}" - lastNotifiedAt: ${updatedAt.toISOString()}${
-          nextRemindAt ? `, next remindAt: ${nextRemindAt.toISOString()}` : ""
+        `[Worker] ✅ Updated todo "${todo.title}" - lastNotifiedAt: ${updatedAt.toISOString()}${
+          nextRemindAt ? `, next remindAt: ${nextRemindAt.toISOString()}` : " (one-time, no reschedule)"
         }`
       );
     }
+
+    const endTime = new Date();
+    const duration = endTime.getTime() - startTime.getTime();
+    console.log(
+      `[Worker] [${endTime.toISOString()}] Finished processing reminders (took ${duration}ms)`
+    );
   } catch (error) {
-    console.error("[Worker] Error processing reminders:", error);
+    console.error(
+      `[Worker] [${new Date().toISOString()}] Error processing reminders:`,
+      error
+    );
   }
 }
 
@@ -204,8 +223,11 @@ async function processDueReminders(): Promise<void> {
  * Runs processDueReminders() every 60 seconds.
  */
 export function startWorker(): void {
-  console.log("[Worker] Starting reminder worker...");
-  console.log("[Worker] Will check for due reminders every 60 seconds");
+  console.log("[Worker] =========================================");
+  console.log("[Worker] Reminder worker started");
+  console.log("[Worker] Polling every 60 seconds");
+  console.log(`[Worker] Started at: ${new Date().toISOString()}`);
+  console.log("[Worker] =========================================");
 
   // Run immediately on startup
   processDueReminders();
@@ -217,22 +239,24 @@ export function startWorker(): void {
 }
 
 // Run worker if this file is executed directly
-if (require.main === module) {
+// Check for both CommonJS and ES module execution
+const isMainModule =
+  require.main === module ||
+  (typeof import.meta !== "undefined" &&
+    import.meta.url === `file://${process.argv[1]}`) ||
+  process.argv[1]?.endsWith("reminderWorker.ts");
+
+if (isMainModule) {
   startWorker();
 
   // Handle graceful shutdown
-  process.on("SIGINT", async () => {
+  const shutdown = async () => {
     console.log("\n[Worker] Shutting down gracefully...");
     await prisma.$disconnect();
-    await pool.end();
     process.exit(0);
-  });
+  };
 
-  process.on("SIGTERM", async () => {
-    console.log("\n[Worker] Shutting down gracefully...");
-    await prisma.$disconnect();
-    await pool.end();
-    process.exit(0);
-  });
+  process.on("SIGINT", shutdown);
+  process.on("SIGTERM", shutdown);
 }
 
