@@ -9,10 +9,49 @@ datasource db {
   provider = "postgresql"
 }
 
+enum RepeatType {
+  NONE
+  DAILY
+  WEEKLY
+}
+
 model User {
-  id          String   @id @default(cuid())
-  email       String   @unique
-  passwordHash String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String           @id @default(cuid())
+  email          String           @unique
+  passwordHash   String
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  todos          Todo[]
+  whatsappSession WhatsAppSession?
+}
+
+model Todo {
+  id            String    @id @default(cuid())
+  user          User      @relation(fields: [userId], references: [id])
+  userId        String
+
+  title         String
+  description   String?
+  remindAt      DateTime      // first or next reminder time
+  repeatType    RepeatType    @default(NONE)
+  repeatDays    String?       // JSON or comma-separated days like "MON,TUE" for weekly specific days
+  isCompleted   Boolean       @default(false)
+  lastNotifiedAt DateTime?    // last time we actually sent a WhatsApp notification
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model WhatsAppSession {
+  id             String   @id @default(cuid())
+  user           User     @relation(fields: [userId], references: [id])
+  userId         String   @unique
+
+  phoneNumber    String   // user's WhatsApp number like +8801...
+  status         String   // e.g., "disconnected", "qr_pending", "ready"
+  sessionData    String?  // optional, serialized session info (for future whatsapp-web.js integration)
+  lastConnectedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
