@@ -94,76 +94,28 @@ function getNextWeeklyReminderDate(
  * Ensures that sessions with status "connecting", "qr_pending", or "ready" have active clients.
  */
 async function syncWhatsAppClients(): Promise<void> {
-  const startTime = new Date();
-  console.log(
-    `[Worker] [${startTime.toISOString()}] Starting WhatsApp client sync...`
-  );
+  console.log("syncWhatsAppClients: checking sessions...");
 
-  try {
-    // Fetch all WhatsAppSession rows that should have active clients
-    const activeSessions = await prisma.whatsAppSession.findMany({
-      where: {
-        status: {
-          in: ["connecting", "qr_pending", "ready"],
-        },
+  const sessions = await prisma.whatsAppSession.findMany({
+    where: {
+      status: {
+        in: ["connecting", "qr_pending", "ready"],
       },
-      include: {
-        user: {
-          select: {
-            id: true,
-            email: true,
-          },
-        },
-      },
-    });
+    },
+    select: {
+      userId: true,
+      status: true,
+    },
+  });
 
-    console.log(
-      `[Worker] Found ${activeSessions.length} active WhatsApp session(s) to sync`
-    );
+  console.log("syncWhatsAppClients: found", sessions.length, "sessions");
 
-    const userIds: string[] = [];
-    for (const session of activeSessions) {
-      userIds.push(session.userId);
-      console.log(
-        `[Worker] Syncing client for user ${session.userId} (${session.user.email}) - Status: ${session.status}, Phone: ${session.phoneNumber}`
-      );
-
-      try {
-        await startWhatsAppClientForUser(session.userId);
-        console.log(
-          `[Worker] ✅ Client initialized/refreshed for user ${session.userId}`
-        );
-      } catch (error) {
-        console.error(
-          `[Worker] ❌ Error starting client for user ${session.userId}:`,
-          error
-        );
-
-        // Optionally set status to error in database
-        try {
-          await prisma.whatsAppSession.update({
-            where: { userId: session.userId },
-            data: { status: "error" },
-          });
-        } catch (dbError) {
-          console.error(
-            `[Worker] Failed to update status to error for user ${session.userId}:`,
-            dbError
-          );
-        }
-      }
+  for (const s of sessions) {
+    try {
+      await startWhatsAppClientForUser(s.userId);
+    } catch (err) {
+      console.error("Failed to start WhatsApp client for user", s.userId, err);
     }
-
-    const endTime = new Date();
-    const duration = endTime.getTime() - startTime.getTime();
-    console.log(
-      `[Worker] [${endTime.toISOString()}] Finished syncing WhatsApp clients (took ${duration}ms) - Processed ${userIds.length} session(s)`
-    );
-  } catch (error) {
-    console.error(
-      `[Worker] [${new Date().toISOString()}] Error syncing WhatsApp clients:`,
-      error
-    );
   }
 }
 
@@ -384,44 +336,24 @@ async function processDueReminders(): Promise<void> {
  * Start the reminder worker.
  * Runs syncWhatsAppClients() and processDueReminders() every 60 seconds.
  */
-export function startWorker(): void {
-  console.log("[Worker] =========================================");
-  console.log("[Worker] Reminder worker started");
-  console.log("[Worker] Polling every 60 seconds");
-  console.log("[Worker] Tasks: WhatsApp client sync + Reminder processing");
-  console.log(`[Worker] Started at: ${new Date().toISOString()}`);
-  console.log("[Worker] =========================================");
+export async function startWorker(): Promise<void> {
+  console.log("Reminder & WhatsApp worker starting...");
 
-  // Run immediately on startup
-  syncWhatsAppClients();
-  processDueReminders();
+  await syncWhatsAppClients(); // initial run
 
-  // Then run every 60 seconds
   setInterval(async () => {
     await syncWhatsAppClients();
     await processDueReminders();
-  }, 60 * 1000);
+  }, 60_000);
+
+  console.log("Worker running: syncing WhatsApp and processing reminders every 60s");
 }
 
 // Run worker if this file is executed directly
-// Check for both CommonJS and ES module execution
-const isMainModule =
-  require.main === module ||
-  (typeof import.meta !== "undefined" &&
-    import.meta.url === `file://${process.argv[1]}`) ||
-  process.argv[1]?.endsWith("reminderWorker.ts");
-
-if (isMainModule) {
-  startWorker();
-
-  // Handle graceful shutdown
-  const shutdown = async () => {
-    console.log("\n[Worker] Shutting down gracefully...");
-    await prisma.$disconnect();
-    process.exit(0);
-  };
-
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+if (require.main === module) {
+  startWorker().catch((err) => {
+    console.error("Worker crashed", err);
+    process.exit(1);
+  });
 }
 
