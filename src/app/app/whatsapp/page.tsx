@@ -48,6 +48,9 @@ export default function WhatsAppPage() {
             // Debug logging
             if (data.status === "connecting" || data.status === "qr_pending") {
               console.log(`[WhatsApp UI] Polled session: status=${data.status}, qrData=${data.qrData ? `exists (${data.qrData.length} chars)` : "null"}`);
+              if (data.qrData) {
+                console.log(`[WhatsApp UI] ✅ QR CODE FOUND! First 50 chars: ${data.qrData.substring(0, 50)}...`);
+              }
             }
           }
           setError(null);
