@@ -44,6 +44,12 @@ export default async function AppLayout({
               >
                 Reminder Logs
               </Link>
+              <Link
+                href="/app/profile"
+                className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors"
+              >
+                Profile
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-4">
