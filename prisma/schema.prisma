@@ -22,8 +22,8 @@ model User {
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 
-  // Notification number where reminders will be sent (separate from WhatsApp login number)
-  notifyNumber   String?          // optional; reminders use this number when set
+  // notification WhatsApp number where reminders will be sent
+  notifyNumber   String?          // optional; reminders use this when set
 
   todos          Todo[]
   whatsappSession WhatsAppSession?
