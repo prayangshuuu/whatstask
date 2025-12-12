@@ -59,13 +59,13 @@ export async function POST() {
     let session;
     if (!existingSession) {
       // Create new session with status "connecting"
-      // phoneNumber can be empty/null since we use QR-only authentication
+      // phoneNumber is optional and can be null for QR-only authentication
+      // DO NOT set qrData, lastQrAt, wa* fields here; they will be null by default
       session = await prisma.whatsAppSession.create({
         data: {
           userId: user.id,
-          phoneNumber: "", // Empty since QR-only auth
+          phoneNumber: null,
           status: "connecting",
-          qrData: null,
         },
         select: {
           status: true,
@@ -101,7 +101,7 @@ export async function POST() {
   } catch (error) {
     console.error("Start/restart WhatsApp session error:", error);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Failed to start WhatsApp session" },
       { status: 500 }
     );
   }
