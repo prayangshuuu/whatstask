@@ -94,28 +94,25 @@ The application uses the following main models:
   - `sessionData`: Serialized session information for whatsapp-web.js integration
 - Each user can have exactly one WhatsApp session
 
-## Reminder Worker
+## Reminder Processing
 
-The reminder worker is a background process that checks for due reminders and sends WhatsApp notifications.
+Reminders are processed via an API endpoint that can be called manually or by an external cron job.
 
-### Running the Worker
+### Processing Reminders
 
-To start the reminder processor, run:
+To process due reminders, call the API endpoint:
 
 ```bash
-npm run worker
+POST /api/reminders/process
 ```
 
-The worker will:
-- Start immediately and sync WhatsApp clients, then check for due reminders
-- Poll every 60 seconds to:
-  1. Sync WhatsApp sessions and start/restart clients
-  2. Process due reminders
-- Log which reminders are being processed with detailed information:
-  - User email
-  - Phone number (if WhatsApp session exists)
-  - Todo title and reminder time
-  - Repeat type and schedule
+Or use curl:
+
+```bash
+curl -X POST http://localhost:3000/api/reminders/process
+```
+
+The reminder processor will:
 - Process todos that are:
   - Not completed
   - Have a `remindAt` time that has passed
@@ -127,8 +124,11 @@ The worker will:
   - **WEEKLY**: Reschedule for next matching weekday (preserves time-of-day)
     - If `repeatDays` is provided (e.g., "SUN,MON"), finds next matching day
     - If not provided, treats as same weekday next week
-
-### WhatsApp Session Sync
+- Log which reminders are being processed with detailed information:
+  - User email
+  - Phone number (if WhatsApp session exists)
+  - Todo title and reminder time
+  - Repeat type and schedule
 
 ### WhatsApp Client Management
 
@@ -145,11 +145,11 @@ WhatsApp clients are started directly from the API when a user clicks "Scan What
   - `lastConnectedAt` is updated
 - **Error Handling**: If client initialization fails, `status` is set to `"error"`
 
-**Important**: The worker must be running (`npm run worker`) for WhatsApp clients to be initialized and QR codes to be generated. When a user sets their WhatsAppSession status to `"connecting"` (via the API), the worker will pick it up on the next sync cycle and start the client.
+**Important**: WhatsApp clients are initialized directly from the API route. No background worker process is needed. When a user clicks "Scan WhatsApp QR", the client starts immediately and generates a QR code.
 
 ### Logging
 
-The worker provides detailed logging:
+The system provides detailed logging:
 - Timestamped log entries for each processing cycle
 - Clear warnings when WhatsApp sessions are missing or not ready
 - Success messages when reminders would be sent
