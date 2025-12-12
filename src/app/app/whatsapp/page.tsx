@@ -52,6 +52,10 @@ export default function WhatsAppPage() {
                 console.log(`[WhatsApp UI] ✅ QR CODE FOUND! First 50 chars: ${data.qrData.substring(0, 50)}...`);
               }
             }
+            // Stop polling if status changed to disconnected or ready
+            if (data.status === "disconnected" || data.status === "ready" || data.status === "error") {
+              return; // useEffect cleanup will clear interval
+            }
           }
           setError(null);
         })
@@ -137,6 +141,32 @@ export default function WhatsAppPage() {
     } catch (err) {
       console.error("Error starting WhatsApp session:", err);
       setError("Error: Could not start WhatsApp session. Please refresh the page or check the logs.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleStopQR = async () => {
+    setSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/whatsapp/stop", {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to stop QR generation");
+      }
+
+      // Refetch session to reflect stopped/disconnected status
+      await fetchSession(false);
+      setError(null);
+      console.log("[WhatsApp UI] ✅ QR generation stopped");
+    } catch (err) {
+      console.error("[WhatsApp UI] Error stopping QR generation:", err);
+      setError(err instanceof Error ? err.message : "Failed to stop QR generation");
     } finally {
       setSubmitting(false);
     }
@@ -282,20 +312,39 @@ export default function WhatsAppPage() {
             <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
               Connecting WhatsApp
             </h3>
-            <button
-              onClick={handleStartQR}
-              disabled={submitting}
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 flex items-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent dark:border-zinc-400"></div>
-                  <span>Restarting...</span>
-                </>
-              ) : (
-                "Restart QR"
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleStopQR}
+                disabled={submitting}
+                className="rounded-md border border-red-300 bg-red-50 px-3 py-1 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-red-600 border-t-transparent dark:border-red-400"></div>
+                    <span>Stopping...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✕</span>
+                    <span>Stop QR</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleStartQR}
+                disabled={submitting}
+                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent dark:border-zinc-400"></div>
+                    <span>Restarting...</span>
+                  </>
+                ) : (
+                  "Restart QR"
+                )}
+              </button>
+            </div>
           </div>
 
           {session.qrData ? (
@@ -323,22 +372,41 @@ export default function WhatsAppPage() {
         <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
-              Scan QR Code
+              Scan WhatsApp QR Code
             </h3>
-            <button
-              onClick={handleStartQR}
-              disabled={submitting}
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 flex items-center gap-2"
-            >
-              {submitting ? (
-                <>
-                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent dark:border-zinc-400"></div>
-                  <span>Restarting...</span>
-                </>
-              ) : (
-                "Restart QR"
-              )}
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleStopQR}
+                disabled={submitting}
+                className="rounded-md border border-red-300 bg-red-50 px-3 py-1 text-sm font-medium text-red-700 transition-colors hover:bg-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-red-700 dark:bg-red-900/20 dark:text-red-400 dark:hover:bg-red-900/30 flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-red-600 border-t-transparent dark:border-red-400"></div>
+                    <span>Stopping...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>✕</span>
+                    <span>Stop QR</span>
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleStartQR}
+                disabled={submitting}
+                className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 flex items-center gap-2"
+              >
+                {submitting ? (
+                  <>
+                    <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent dark:border-zinc-400"></div>
+                    <span>Restarting...</span>
+                  </>
+                ) : (
+                  "Restart QR"
+                )}
+              </button>
+            </div>
           </div>
 
           {session.qrData ? (

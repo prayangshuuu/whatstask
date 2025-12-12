@@ -171,3 +171,37 @@ export function getWhatsAppClientForUser(userId: string): Client | null {
   return clients.get(userId) ?? null;
 }
 
+/**
+ * Stop and destroy a WhatsApp client for a specific user.
+ * This will:
+ * - Destroy the client gracefully
+ * - Remove it from the map
+ * - Prevent any further QR events
+ */
+export async function stopWhatsAppClientForUser(userId: string): Promise<boolean> {
+  const client = clients.get(userId);
+  
+  if (!client) {
+    console.log(`[WhatsApp Client] No client found for user ${userId} to stop`);
+    return false;
+  }
+
+  try {
+    console.log(`[WhatsApp Client] Stopping client for user ${userId}...`);
+    
+    // Remove from map first to prevent new events
+    clients.delete(userId);
+    
+    // Destroy the client gracefully
+    await client.destroy();
+    
+    console.log(`[WhatsApp Client] ✅ Client stopped and destroyed for user ${userId}`);
+    return true;
+  } catch (err) {
+    console.error(`[WhatsApp Client] ❌ Error stopping client for user ${userId}:`, err);
+    // Ensure it's removed from map even if destroy fails
+    clients.delete(userId);
+    return false;
+  }
+}
+
