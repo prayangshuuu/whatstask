@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 interface ProfileData {
   email: string;
   notifyNumber: string | null;
+  webhookUrl: string | null;
 }
 
 export default function ProfilePage() {
@@ -16,6 +17,7 @@ export default function ProfilePage() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [notifyNumber, setNotifyNumber] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
 
   useEffect(() => {
     fetchProfile();
@@ -37,6 +39,7 @@ export default function ProfilePage() {
       const data = await response.json();
       setProfile(data);
       setNotifyNumber(data.notifyNumber || "");
+      setWebhookUrl(data.webhookUrl || "");
     } catch (err) {
       setError("Failed to load profile");
       console.error(err);
@@ -56,7 +59,10 @@ export default function ProfilePage() {
       const response = await fetch("/api/profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ notifyNumber: notifyNumber.trim() || null }),
+        body: JSON.stringify({
+          notifyNumber: notifyNumber.trim() || null,
+          webhookUrl: webhookUrl.trim() || null,
+        }),
       });
 
       if (!response.ok) {
@@ -67,6 +73,7 @@ export default function ProfilePage() {
       const data = await response.json();
       setProfile(data);
       setNotifyNumber(data.notifyNumber || "");
+      setWebhookUrl(data.webhookUrl || "");
       setSuccess("Profile updated successfully!");
       
       // Clear success message after 3 seconds
@@ -138,6 +145,23 @@ export default function ProfilePage() {
               />
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 This is the WhatsApp number where reminders will be sent. It can be different from your login device number.
+              </p>
+            </div>
+
+            {/* Webhook URL Field */}
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Webhook URL <span className="text-zinc-400">(Optional)</span>
+              </label>
+              <input
+                type="url"
+                value={webhookUrl}
+                onChange={(e) => setWebhookUrl(e.target.value)}
+                placeholder="https://your-webhook-url.com/endpoint"
+                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+              />
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                When a reminder is sent, we'll POST a JSON payload to this URL. Leave empty to disable webhooks.
               </p>
             </div>
 

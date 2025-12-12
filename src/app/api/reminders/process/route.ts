@@ -1,13 +1,22 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { processDueReminders } from "@/server/reminderProcessor";
 
 /**
  * API route to process due reminders.
  * Can be called manually or by an external cron job.
  * POST /api/reminders/process
+ * 
+ * Optional: Add a simple auth token check via header or query param
+ * For now, leaving it open for easy cron integration
  */
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
+    // Optional: Check for auth token in header or query
+    // const authToken = request.headers.get("x-cron-token") || request.nextUrl.searchParams.get("token");
+    // if (authToken !== process.env.CRON_SECRET_TOKEN) {
+    //   return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // }
+
     await processDueReminders();
     return NextResponse.json({ 
       success: true,

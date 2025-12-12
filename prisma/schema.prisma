@@ -24,6 +24,7 @@ model User {
 
   // notification WhatsApp number where reminders will be sent
   notifyNumber   String?          // optional; reminders use this when set
+  webhookUrl     String?          // optional; webhook URL to POST reminder payloads to
 
   todos          Todo[]
   whatsappSession WhatsAppSession?

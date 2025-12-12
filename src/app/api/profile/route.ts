@@ -39,12 +39,13 @@ export async function GET() {
       );
     }
 
-    // Fetch user with notifyNumber
+    // Fetch user with notifyNumber and webhookUrl
     const userData = await prisma.user.findUnique({
       where: { id: user.id },
       select: {
         email: true,
         notifyNumber: true,
+        webhookUrl: true,
       },
     });
 
@@ -58,6 +59,7 @@ export async function GET() {
     return NextResponse.json({
       email: userData.email,
       notifyNumber: userData.notifyNumber,
+      webhookUrl: userData.webhookUrl,
     });
   } catch (error) {
     console.error("Get profile error:", error);
@@ -80,22 +82,46 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { notifyNumber } = body;
+    const { notifyNumber, webhookUrl } = body;
 
     // Normalize phone number
     const normalizedNumber = notifyNumber
       ? normalizePhoneNumber(notifyNumber)
       : null;
 
+    // Validate webhook URL if provided
+    let normalizedWebhookUrl: string | null = null;
+    if (webhookUrl && webhookUrl.trim()) {
+      try {
+        const url = new URL(webhookUrl.trim());
+        // Only allow http/https
+        if (url.protocol === "http:" || url.protocol === "https:") {
+          normalizedWebhookUrl = url.toString();
+        } else {
+          return NextResponse.json(
+            { error: "Webhook URL must use http:// or https://" },
+            { status: 400 }
+          );
+        }
+      } catch {
+        return NextResponse.json(
+          { error: "Invalid webhook URL format" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Update user profile
     const updatedUser = await prisma.user.update({
       where: { id: user.id },
       data: {
         notifyNumber: normalizedNumber,
+        webhookUrl: normalizedWebhookUrl,
       },
       select: {
         email: true,
         notifyNumber: true,
+        webhookUrl: true,
       },
     });
 

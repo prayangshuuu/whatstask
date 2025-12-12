@@ -33,27 +33,38 @@ async function sendWhatsAppMessage(
 
 /**
  * Calculate the next reminder date for a weekly repeat pattern.
+ * Uses weekday names (SUN, MON, etc.) matching the todoHelpers logic.
  */
 function getNextWeeklyReminderDate(
   currentRemindAt: Date,
   repeatDays: string
 ): Date {
-  const days = repeatDays.split(",").map((d) => parseInt(d.trim(), 10));
-  const currentDay = currentRemindAt.getDay();
-  const currentTime = currentRemindAt.getHours() * 60 + currentRemindAt.getMinutes();
+  const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+  const dayMap: { [key: string]: number } = {
+    SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6,
+  };
 
-  // Find next day in the repeat pattern
-  for (let i = 1; i <= 7; i++) {
-    const checkDay = (currentDay + i) % 7;
-    if (days.includes(checkDay)) {
-      const nextDate = new Date(currentRemindAt);
-      nextDate.setDate(nextDate.getDate() + i);
-      nextDate.setHours(Math.floor(currentTime / 60), currentTime % 60, 0, 0);
-      return nextDate;
+  const days = repeatDays.split(",").map((d) => d.trim().toUpperCase());
+  const [hours, minutes] = [
+    currentRemindAt.getHours(),
+    currentRemindAt.getMinutes(),
+  ];
+  const now = new Date();
+
+  // Check next 14 days for matching weekdays
+  for (let dayOffset = 1; dayOffset <= 14; dayOffset++) {
+    const candidate = new Date(currentRemindAt);
+    candidate.setDate(candidate.getDate() + dayOffset);
+    candidate.setHours(hours, minutes, 0, 0);
+
+    const dayName = DAYS[candidate.getDay()];
+
+    if (days.includes(dayName) && candidate > now) {
+      return candidate;
     }
   }
 
-  // Fallback: next week, same day
+  // Fallback: next week, same weekday
   const fallback = new Date(currentRemindAt);
   fallback.setDate(fallback.getDate() + 7);
   return fallback;
@@ -65,9 +76,7 @@ function getNextWeeklyReminderDate(
  */
 export async function processDueReminders(): Promise<void> {
   const startTime = new Date();
-  console.log(
-    `[Reminder Processor] [${startTime.toISOString()}] Starting reminder processing...`
-  );
+  console.log(`[Reminder Processor] Starting processing at ${startTime.toISOString()}`);
 
   try {
     const now = new Date();
@@ -86,24 +95,31 @@ export async function processDueReminders(): Promise<void> {
             id: true,
             email: true,
             notifyNumber: true,
+            webhookUrl: true,
           },
         },
       },
     });
 
-    console.log(`[Reminder Processor] Found ${candidateTodos.length} candidate todo(s)`);
+    // Filter: only process if lastNotifiedAt is null OR lastNotifiedAt < remindAt (to avoid duplicate sends)
+    const dueTodos = candidateTodos.filter(
+      (todo) =>
+        !todo.lastNotifiedAt ||
+        new Date(todo.lastNotifiedAt) < new Date(todo.remindAt)
+    );
+
+    if (dueTodos.length > 0) {
+      console.log(`[Reminder Processor] Processing ${dueTodos.length} due reminder(s)`);
+    }
 
     let sentCount = 0;
     let skippedCount = 0;
     let errorCount = 0;
 
-    for (const todo of candidateTodos) {
+    for (const todo of dueTodos) {
       try {
         // Check if user has notification number set
         if (!todo.user.notifyNumber) {
-          console.warn(
-            `[Reminder Processor] Skipping todo ${todo.id} - user ${todo.user.email} has no notifyNumber`
-          );
           skippedCount++;
           continue;
         }
@@ -114,9 +130,6 @@ export async function processDueReminders(): Promise<void> {
         });
 
         if (!whatsappSession || whatsappSession.status !== "ready") {
-          console.warn(
-            `[Reminder Processor] Skipping todo ${todo.id} - WhatsApp session not ready for user ${todo.user.email}`
-          );
           skippedCount++;
           continue;
         }
@@ -124,24 +137,26 @@ export async function processDueReminders(): Promise<void> {
         // Get WhatsApp client
         const client = getWhatsAppClientForUser(todo.userId);
         if (!client) {
-          console.warn(
-            `[Reminder Processor] Skipping todo ${todo.id} - no WhatsApp client found for user ${todo.user.email}`
-          );
           skippedCount++;
           continue;
         }
 
         // Build message
+        const repeatLabel =
+          todo.repeatType === "DAILY"
+            ? " (Daily)"
+            : todo.repeatType === "WEEKLY"
+            ? " (Weekly)"
+            : "";
         const message =
           "⏰ Reminder: " +
           todo.title +
+          repeatLabel +
           (todo.description ? "\n\n" + todo.description : "") +
           "\n\nSent via WhatsTask";
 
         // Send message
-        console.log(
-          `[Reminder Processor] Sending reminder to ${todo.user.notifyNumber} for todo "${todo.title}"`
-        );
+        console.log(`[Reminder Processor] 📤 Sending reminder: "${todo.title}" to ${todo.user.notifyNumber}`);
 
         const sent = await sendWhatsAppMessage(
           client,
@@ -153,10 +168,9 @@ export async function processDueReminders(): Promise<void> {
           // Update todo: mark as notified and calculate next reminder
           const updateData: {
             lastNotifiedAt: Date;
-            remindAt: Date;
+            remindAt?: Date;
           } = {
             lastNotifiedAt: now,
-            remindAt: todo.remindAt, // Default: keep same
           };
 
           if (todo.repeatType === "DAILY") {
@@ -187,8 +201,40 @@ export async function processDueReminders(): Promise<void> {
             },
           });
 
+          // Send webhook if configured
+          if (todo.user.webhookUrl && todo.user.webhookUrl.trim()) {
+            try {
+              const webhookPayload = {
+                todoId: todo.id,
+                title: todo.title,
+                description: todo.description,
+                remindAt: todo.remindAt.toISOString(),
+                repeatType: todo.repeatType,
+                repeatDays: todo.repeatDays,
+                userEmail: todo.user.email,
+                notifyNumber: todo.user.notifyNumber,
+                sentAt: now.toISOString(),
+              };
+
+              const webhookResponse = await fetch(todo.user.webhookUrl.trim(), {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(webhookPayload),
+                signal: AbortSignal.timeout(5000), // 5 second timeout
+              });
+
+              if (!webhookResponse.ok) {
+                console.warn(`[Reminder Processor] Webhook returned ${webhookResponse.status} for todo ${todo.id}`);
+              }
+            } catch (webhookErr) {
+              // Don't fail the reminder if webhook fails
+              console.warn(`[Reminder Processor] Webhook failed for todo ${todo.id}`);
+            }
+          }
+
           sentCount++;
-          console.log(`[Reminder Processor] ✅ Successfully sent reminder for todo ${todo.id}`);
         } else {
           // Log failure
           await prisma.reminderLog.create({
@@ -201,11 +247,11 @@ export async function processDueReminders(): Promise<void> {
             },
           });
           errorCount++;
-          console.error(`[Reminder Processor] ❌ Failed to send reminder for todo ${todo.id}`);
+          console.error(`[Reminder Processor] Failed to send reminder for todo ${todo.id}`);
         }
       } catch (err) {
         errorCount++;
-        console.error(`[Reminder Processor] ❌ Error processing todo ${todo.id}:`, err);
+        console.error(`[Reminder Processor] Error processing todo ${todo.id}:`, err);
 
         // Log error
         try {
@@ -227,13 +273,10 @@ export async function processDueReminders(): Promise<void> {
     const endTime = new Date();
     const duration = endTime.getTime() - startTime.getTime();
     console.log(
-      `[Reminder Processor] [${endTime.toISOString()}] Finished processing reminders (took ${duration}ms) - Sent: ${sentCount}, Skipped: ${skippedCount}, Errors: ${errorCount}`
+      `[Reminder Processor] Finished: Sent=${sentCount}, Skipped=${skippedCount}, Errors=${errorCount} (${duration}ms)`
     );
   } catch (error) {
-    console.error(
-      `[Reminder Processor] [${new Date().toISOString()}] Error processing reminders:`,
-      error
-    );
+    console.error(`[Reminder Processor] Error:`, error);
     throw error;
   }
 }
