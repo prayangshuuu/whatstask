@@ -53,17 +53,21 @@ model WhatsAppSession {
   user            User     @relation(fields: [userId], references: [id])
   userId          String   @unique
 
-  phoneNumber     String   // number used to LOGIN to WhatsApp app (business/device number)
-  status          String   // "disconnected" | "connecting" | "qr_pending" | "ready" | "error"
-  sessionData     String?  // optional serialized session json (for whatsapp-web.js)
-  qrData          String?  // base64-encoded QR data URL for frontend
+  // login/device-related number (unused for sending; just kept if needed)
+  phoneNumber     String?
+
+  status          String   // "none" | "disconnected" | "connecting" | "qr_pending" | "ready" | "error"
+  sessionData     String?  // optional serialized session JSON (if we ever use it)
+
+  // QR & status timing
+  qrData          String?  // base64 dataURL for current QR code
   lastQrAt        DateTime?
   lastConnectedAt DateTime?
 
   // Profile info from WhatsApp client
-  waNumberRaw     String?  // raw number from client.info.wid, e.g. "8801xxxxxx"
-  waDisplayName   String?  // pushname or name from WhatsApp
-  waProfilePicUrl String?  // profile picture URL
+  waNumberRaw     String?  // raw number like "880197801030"
+  waDisplayName   String?  // pushname or account name
+  waProfilePicUrl String?  // URL returned by whatsapp-web.js
 
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
