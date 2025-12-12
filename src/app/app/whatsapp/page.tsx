@@ -19,7 +19,7 @@ export default function WhatsAppPage() {
   const [session, setSession] = useState<WhatsAppSession | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     fetchSession();
@@ -32,16 +32,37 @@ export default function WhatsAppPage() {
     }
 
     const pollInterval = setInterval(() => {
-      fetchSession();
+      // Fetch session without setting loading state during polling
+      fetch("/api/whatsapp/session")
+        .then((res) => {
+          if (res.ok) {
+            return res.json();
+          }
+          throw new Error("Failed to fetch session");
+        })
+        .then((data) => {
+          if (!data || data.status === "none") {
+            setSession(null);
+          } else {
+            setSession(data);
+          }
+          setError(null);
+        })
+        .catch((err) => {
+          console.error("Error polling WhatsApp session:", err);
+          // Don't set error during polling to avoid disrupting UX
+        });
     }, 3000);
 
     return () => clearInterval(pollInterval);
   }, [session?.status]);
 
-  const fetchSession = async () => {
+  const fetchSession = async (setLoadingState = true) => {
     try {
-      setLoading(true);
-      setError("");
+      if (setLoadingState) {
+        setLoading(true);
+      }
+      setError(null);
       const response = await fetch("/api/whatsapp/session");
 
       if (!response.ok) {
@@ -59,12 +80,14 @@ export default function WhatsAppPage() {
       } else {
         setSession(data);
       }
-      setError("");
+      setError(null);
     } catch (err) {
       setError("Could not load WhatsApp status. Please refresh the page or check the logs.");
       console.error("Error fetching WhatsApp session:", err);
     } finally {
-      setLoading(false);
+      if (setLoadingState) {
+        setLoading(false);
+      }
     }
   };
 
@@ -101,13 +124,9 @@ export default function WhatsAppPage() {
       } else {
         setSession(data);
       }
-      setError("");
+      setError(null);
       
-      // Start polling after successful POST
-      // Small delay to ensure database is updated
-      setTimeout(() => {
-        fetchSession();
-      }, 500);
+      // Polling will start automatically via useEffect when status becomes "connecting"
     } catch (err) {
       console.error("Error starting WhatsApp session:", err);
       setError("Error: Could not start WhatsApp session. Please refresh the page or check the logs.");
@@ -136,7 +155,7 @@ export default function WhatsAppPage() {
 
       // Refetch session to reflect disconnected status
       await fetchSession();
-      setError("");
+      setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to logout");
     } finally {
@@ -249,8 +268,8 @@ export default function WhatsAppPage() {
             {submitting ? "Disconnecting..." : "Logout from WhatsApp"}
           </button>
         </div>
-      ) : session.status === "connecting" || session.status === "qr_pending" ? (
-        // Connecting/QR Pending - show QR code and restart button
+      ) : session.status === "connecting" ? (
+        // Connecting - show QR code if available, otherwise waiting message
         <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="mb-4 flex items-center justify-between">
             <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
@@ -273,22 +292,58 @@ export default function WhatsAppPage() {
           </div>
 
           {session.qrData ? (
-            <div className="space-y-4">
-              <div className="flex flex-col items-center gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-800/50">
-                <img
-                  src={session.qrData}
-                  alt="WhatsApp QR Code"
-                  className="rounded-lg border border-zinc-200 bg-white p-2 dark:border-zinc-700"
-                />
-                <div className="text-center">
-                  <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                    Scan this QR code with WhatsApp
-                  </p>
-                  <p className="text-xs text-zinc-600 dark:text-zinc-400">
-                    Open WhatsApp → Linked Devices → Link a device and scan this QR.
-                  </p>
-                </div>
+            <div className="flex flex-col items-center gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-800/50">
+              <img
+                src={session.qrData}
+                alt="WhatsApp QR code"
+                className="w-64 h-64 rounded-lg border border-zinc-200 bg-white p-2 dark:border-zinc-700"
+              />
+              <p className="text-sm text-zinc-700 dark:text-zinc-300 text-center">
+                Open WhatsApp → Linked Devices → Link a device and scan this QR.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+              <div className="flex items-center gap-2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600 dark:border-blue-600 dark:border-t-blue-400"></div>
+                <p>Waiting for QR code...</p>
               </div>
+            </div>
+          )}
+        </div>
+      ) : session.status === "qr_pending" ? (
+        // QR Pending - show QR code if available
+        <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+          <div className="mb-4 flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
+              Scan QR Code
+            </h3>
+            <button
+              onClick={handleStartQR}
+              disabled={submitting}
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 flex items-center gap-2"
+            >
+              {submitting ? (
+                <>
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent dark:border-zinc-400"></div>
+                  <span>Restarting...</span>
+                </>
+              ) : (
+                "Restart QR"
+              )}
+            </button>
+          </div>
+
+          {session.qrData ? (
+            <div className="flex flex-col items-center gap-4 rounded-lg border border-zinc-200 bg-zinc-50 p-6 dark:border-zinc-700 dark:bg-zinc-800/50">
+              <img
+                src={session.qrData}
+                alt="WhatsApp QR code"
+                className="w-64 h-64 rounded-lg border border-zinc-200 bg-white p-2 dark:border-zinc-700"
+              />
+              <p className="text-sm text-zinc-700 dark:text-zinc-300 text-center">
+                Open WhatsApp → Linked Devices → Link a device and scan this QR.
+              </p>
             </div>
           ) : (
             <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
