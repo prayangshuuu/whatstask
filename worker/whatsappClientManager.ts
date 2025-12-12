@@ -69,7 +69,7 @@ async function startWhatsAppClientForUser(
       const info = client.info;
       const wid = info?.wid?._serialized ?? "";
       const waNumberRaw = wid.replace("@c.us", "") || null;
-      const waDisplayName = info.pushname || info.me?.name || null;
+      const waDisplayName = info.pushname || null;
 
       let waProfilePicUrl: string | null = null;
       try {
