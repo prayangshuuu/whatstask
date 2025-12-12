@@ -94,7 +94,7 @@ function getNextWeeklyReminderDate(
  * Ensures that sessions with status "connecting", "qr_pending", or "ready" have active clients.
  */
 async function syncWhatsAppClients(): Promise<void> {
-  console.log("syncWhatsAppClients: checking sessions...");
+  console.log("[Worker] 🔄 syncWhatsAppClients: checking sessions...");
 
   try {
     const sessions = await prisma.whatsAppSession.findMany({
@@ -109,23 +109,28 @@ async function syncWhatsAppClients(): Promise<void> {
       },
     });
 
-    console.log("syncWhatsAppClients: found", sessions.length, "sessions");
+    console.log(`[Worker] Found ${sessions.length} active session(s) to sync`);
+
+    if (sessions.length === 0) {
+      console.log("[Worker] No active sessions found");
+      return;
+    }
 
     for (const s of sessions) {
-      console.log("syncWhatsAppClients: starting client for user", s.userId, "status:", s.status);
+      console.log(`[Worker] 🚀 Starting client for user ${s.userId}, status: ${s.status}`);
       try {
         const client = await startWhatsAppClientForUser(s.userId);
         if (client) {
-          console.log("syncWhatsAppClients: successfully started client for user", s.userId);
+          console.log(`[Worker] ✅ Client started for user ${s.userId}`);
         } else {
-          console.warn("syncWhatsAppClients: startWhatsAppClientForUser returned null for user", s.userId);
+          console.warn(`[Worker] ⚠️  startWhatsAppClientForUser returned null for user ${s.userId}`);
         }
       } catch (err) {
-        console.error("Failed to start WhatsApp client for user", s.userId, err);
+        console.error(`[Worker] ❌ Failed to start WhatsApp client for user ${s.userId}:`, err);
       }
     }
   } catch (err) {
-    console.error("Error in syncWhatsAppClients:", err);
+    console.error("[Worker] ❌ Error in syncWhatsAppClients:", err);
   }
 }
 

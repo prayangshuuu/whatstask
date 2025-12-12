@@ -35,6 +35,8 @@ async function startWhatsAppClientForUser(
     return null;
   }
 
+  console.log(`[WhatsApp Client] Creating client for user ${userId}, session status: ${session.status}`);
+
   // Create client with LocalAuth (clientId ensures separate session per user)
   const client = new Client({
     authStrategy: new LocalAuth({
@@ -42,16 +44,23 @@ async function startWhatsAppClientForUser(
     }),
     puppeteer: {
       headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     },
+  });
+
+  // Handle loading_screen event to track initialization progress
+  client.on("loading_screen", (percent, message) => {
+    console.log(`[WhatsApp Client] Loading screen for user ${userId}: ${percent}% - ${message}`);
   });
 
   // Handle QR event: generate base64 and store in DB
   client.on("qr", async (qr) => {
-    console.log("QR event received for user", userId);
+    console.log(`[WhatsApp Client] ⚡ QR event received for user ${userId}`);
     try {
       const qrDataUrl = await qrcode.toDataURL(qr);
-      console.log("QR code generated as data URL for user", userId, "length:", qrDataUrl.length);
-      await prisma.whatsAppSession.update({
+      console.log(`[WhatsApp Client] QR code generated as data URL for user ${userId}, length: ${qrDataUrl.length}`);
+      
+      const updated = await prisma.whatsAppSession.update({
         where: { userId },
         data: {
           status: "qr_pending",
@@ -59,9 +68,10 @@ async function startWhatsAppClientForUser(
           lastQrAt: new Date(),
         },
       });
-      console.log("QR generated and stored for user", userId);
+      
+      console.log(`[WhatsApp Client] ✅ QR generated and stored for user ${userId}, qrData length: ${updated.qrData?.length || 0}`);
     } catch (err) {
-      console.error("Failed to store QR for user", userId, err);
+      console.error(`[WhatsApp Client] ❌ Failed to store QR for user ${userId}:`, err);
     }
   });
 
@@ -134,13 +144,19 @@ async function startWhatsAppClientForUser(
   // Store client in map before initializing
   clients.set(userId, client);
   
-  // Initialize client (this is async but we don't await it - events will fire asynchronously)
-  client.initialize().catch((err) => {
-    console.error("Error initializing WhatsApp client for user", userId, err);
-    clients.delete(userId);
-  });
+  console.log(`[WhatsApp Client] Starting initialization for user ${userId}...`);
   
-  console.log("WhatsApp client initialized for user", userId);
+  // Initialize client (this is async but we don't await it - events will fire asynchronously)
+  client.initialize()
+    .then(() => {
+      console.log(`[WhatsApp Client] ✅ Client initialization completed for user ${userId}`);
+    })
+    .catch((err) => {
+      console.error(`[WhatsApp Client] ❌ Error initializing WhatsApp client for user ${userId}:`, err);
+      clients.delete(userId);
+    });
+  
+  console.log(`[WhatsApp Client] Client initialization started for user ${userId} (async)`);
 
   return client;
 }

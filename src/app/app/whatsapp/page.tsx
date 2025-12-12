@@ -45,11 +45,15 @@ export default function WhatsAppPage() {
             setSession(null);
           } else {
             setSession(data);
+            // Debug logging
+            if (data.status === "connecting" || data.status === "qr_pending") {
+              console.log(`[WhatsApp UI] Polled session: status=${data.status}, qrData=${data.qrData ? `exists (${data.qrData.length} chars)` : "null"}`);
+            }
           }
           setError(null);
         })
         .catch((err) => {
-          console.error("Error polling WhatsApp session:", err);
+          console.error("[WhatsApp UI] Error polling WhatsApp session:", err);
           // Don't set error during polling to avoid disrupting UX
         });
     }, 3000);
