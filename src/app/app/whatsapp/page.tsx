@@ -41,6 +41,7 @@ export default function WhatsAppPage() {
   const fetchSession = async () => {
     try {
       setLoading(true);
+      setError("");
       const response = await fetch("/api/whatsapp/session");
 
       if (!response.ok) {
@@ -52,11 +53,16 @@ export default function WhatsAppPage() {
       }
 
       const data = await response.json();
-      setSession(data);
+      // Handle null or "none" status properly
+      if (!data || data.status === "none") {
+        setSession(null);
+      } else {
+        setSession(data);
+      }
       setError("");
     } catch (err) {
-      setError("Could not load WhatsApp status. Please refresh.");
-      console.error(err);
+      setError("Could not load WhatsApp status. Please refresh the page or check the logs.");
+      console.error("Error fetching WhatsApp session:", err);
     } finally {
       setLoading(false);
     }
@@ -72,17 +78,39 @@ export default function WhatsAppPage() {
       });
 
       if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.error || "Failed to start QR session");
+        // Try to read error message from response
+        let errorMessage = "Could not start WhatsApp session. Please try again.";
+        try {
+          const data = await response.json();
+          if (data.error) {
+            errorMessage = data.error;
+          }
+        } catch (parseError) {
+          // If JSON parsing fails, use default message
+          console.error("Failed to parse error response:", parseError);
+        }
+        setError(`Error: ${errorMessage}`);
+        setSubmitting(false);
+        return;
       }
 
       const data = await response.json();
-      setSession(data);
+      // Handle response properly
+      if (!data || data.status === "none") {
+        setSession(null);
+      } else {
+        setSession(data);
+      }
       setError("");
-      // Start polling after starting QR
-      fetchSession();
+      
+      // Start polling after successful POST
+      // Small delay to ensure database is updated
+      setTimeout(() => {
+        fetchSession();
+      }, 500);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to start QR session");
+      console.error("Error starting WhatsApp session:", err);
+      setError("Error: Could not start WhatsApp session. Please refresh the page or check the logs.");
     } finally {
       setSubmitting(false);
     }
@@ -132,7 +160,10 @@ export default function WhatsAppPage() {
           <div className="flex items-center justify-between">
             <span>{error}</span>
             <button
-              onClick={fetchSession}
+              onClick={() => {
+                setError("");
+                fetchSession();
+              }}
               className="ml-4 rounded-md bg-red-100 px-3 py-1 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
             >
               Retry
@@ -228,9 +259,16 @@ export default function WhatsAppPage() {
             <button
               onClick={handleStartQR}
               disabled={submitting}
-              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+              className="rounded-md border border-zinc-300 px-3 py-1 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800 flex items-center gap-2"
             >
-              {submitting ? "Restarting..." : "Restart QR"}
+              {submitting ? (
+                <>
+                  <div className="h-3 w-3 animate-spin rounded-full border-2 border-zinc-600 border-t-transparent dark:border-zinc-400"></div>
+                  <span>Restarting...</span>
+                </>
+              ) : (
+                "Restart QR"
+              )}
             </button>
           </div>
 
@@ -273,9 +311,16 @@ export default function WhatsAppPage() {
             <button
               onClick={handleStartQR}
               disabled={submitting}
-              className="rounded-md bg-green-600 px-6 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-md bg-green-600 px-6 py-3 font-medium text-white transition-colors hover:bg-green-700 disabled:cursor-not-allowed disabled:opacity-50 flex items-center justify-center gap-2"
             >
-              {submitting ? "Starting..." : "Scan WhatsApp QR"}
+              {submitting ? (
+                <>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></div>
+                  <span>Connecting...</span>
+                </>
+              ) : (
+                "Scan WhatsApp QR"
+              )}
             </button>
           </div>
         </div>
