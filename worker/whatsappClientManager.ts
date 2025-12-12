@@ -39,15 +39,9 @@ export async function startWhatsAppClientForUser(
     return null;
   }
 
-  if (!session.phoneNumber) {
-    console.warn(
-      `[WhatsApp Client] No phoneNumber set for user ${userId}`
-    );
-    return null;
-  }
-
+  // Note: phoneNumber is not required for QR-only authentication
   console.log(
-    `[WhatsApp Client] Starting client for user ${userId} (${session.phoneNumber})`
+    `[WhatsApp Client] Starting client for user ${userId}`
   );
 
   // Create new Client instance with LocalAuth

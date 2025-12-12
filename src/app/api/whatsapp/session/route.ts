@@ -16,8 +16,6 @@ export async function GET() {
     const session = await prisma.whatsAppSession.findUnique({
       where: { userId: user.id },
       select: {
-        id: true,
-        phoneNumber: true,
         status: true,
         qrData: true,
         lastQrAt: true,
@@ -25,13 +23,11 @@ export async function GET() {
         waNumberRaw: true,
         waDisplayName: true,
         waProfilePicUrl: true,
-        createdAt: true,
-        updatedAt: true,
       },
     });
 
     if (!session) {
-      return NextResponse.json(null);
+      return NextResponse.json({ status: "none" });
     }
 
     return NextResponse.json(session);
@@ -44,7 +40,7 @@ export async function GET() {
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
     const user = await getCurrentUser();
 
@@ -55,25 +51,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
-    const { phoneNumber } = body;
-
-    if (!phoneNumber) {
-      return NextResponse.json(
-        { error: "phoneNumber is required" },
-        { status: 400 }
-      );
-    }
-
-    // Validate phone number format (basic validation - should start with +)
-    if (!phoneNumber.startsWith("+")) {
-      return NextResponse.json(
-        { error: "Phone number must start with + (e.g., +1234567890)" },
-        { status: 400 }
-      );
-    }
-
-    // Check if session exists and its current status
+    // Check if session exists
     const existingSession = await prisma.whatsAppSession.findUnique({
       where: { userId: user.id },
     });
@@ -81,16 +59,15 @@ export async function POST(request: NextRequest) {
     let session;
     if (!existingSession) {
       // Create new session with status "connecting"
+      // phoneNumber can be empty/null since we use QR-only authentication
       session = await prisma.whatsAppSession.create({
         data: {
           userId: user.id,
-          phoneNumber,
+          phoneNumber: "", // Empty since QR-only auth
           status: "connecting",
           qrData: null,
         },
         select: {
-          id: true,
-          phoneNumber: true,
           status: true,
           qrData: true,
           lastQrAt: true,
@@ -98,45 +75,17 @@ export async function POST(request: NextRequest) {
           waNumberRaw: true,
           waDisplayName: true,
           waProfilePicUrl: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-    } else if (existingSession.status === "ready") {
-      // If already ready, allow reconnection by resetting to "connecting"
-      session = await prisma.whatsAppSession.update({
-        where: { userId: user.id },
-        data: {
-          phoneNumber,
-          status: "connecting",
-          qrData: null,
-        },
-        select: {
-          id: true,
-          phoneNumber: true,
-          status: true,
-          qrData: true,
-          lastQrAt: true,
-          lastConnectedAt: true,
-          waNumberRaw: true,
-          waDisplayName: true,
-          waProfilePicUrl: true,
-          createdAt: true,
-          updatedAt: true,
         },
       });
     } else {
-      // Update existing session that's not ready
+      // Update existing session - reset to connecting
       session = await prisma.whatsAppSession.update({
         where: { userId: user.id },
         data: {
-          phoneNumber,
           status: "connecting",
           qrData: null,
         },
         select: {
-          id: true,
-          phoneNumber: true,
           status: true,
           qrData: true,
           lastQrAt: true,
@@ -144,15 +93,13 @@ export async function POST(request: NextRequest) {
           waNumberRaw: true,
           waDisplayName: true,
           waProfilePicUrl: true,
-          createdAt: true,
-          updatedAt: true,
         },
       });
     }
 
     return NextResponse.json(session, { status: 200 });
   } catch (error) {
-    console.error("Create/update WhatsApp session error:", error);
+    console.error("Start/restart WhatsApp session error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

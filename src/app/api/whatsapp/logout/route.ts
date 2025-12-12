@@ -13,7 +13,7 @@ export async function POST() {
       );
     }
 
-    // Update WhatsAppSession to disconnected status
+    // Update WhatsAppSession to disconnected status if it exists
     await prisma.whatsAppSession.updateMany({
       where: { userId: user.id },
       data: {
@@ -23,7 +23,7 @@ export async function POST() {
       },
     });
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ ok: true });
   } catch (error) {
     console.error("WhatsApp logout error:", error);
     return NextResponse.json(
