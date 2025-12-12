@@ -89,6 +89,29 @@ export async function startWhatsAppClientForUser(
   client.on("ready", async () => {
     console.log(`[WhatsApp Client] Client ready for user ${userId}`);
     try {
+      // Get basic info from whatsapp-web.js
+      const info = client.info;
+      
+      // Derive waNumberRaw from wid
+      const waNumberRaw = info.wid?._serialized?.replace("@c.us", "") || null;
+      
+      // Derive display name
+      const waDisplayName = info.pushname || (info.me as any)?.name || null;
+      
+      // Get profile picture URL
+      let waProfilePicUrl: string | null = null;
+      try {
+        if (info.wid?._serialized) {
+          waProfilePicUrl = await client.getProfilePicUrl(info.wid._serialized);
+        }
+      } catch (picError) {
+        // Profile picture may not be available, keep null
+        console.log(
+          `[WhatsApp Client] Could not fetch profile picture for user ${userId}:`,
+          picError
+        );
+      }
+
       // Update WhatsAppSession in database
       await prisma.whatsAppSession.update({
         where: { userId },
@@ -96,6 +119,9 @@ export async function startWhatsAppClientForUser(
           status: "ready",
           qrData: null,
           lastConnectedAt: new Date(),
+          waNumberRaw,
+          waDisplayName,
+          waProfilePicUrl,
         },
       });
 
@@ -105,7 +131,9 @@ export async function startWhatsAppClientForUser(
         clientEntry.status = "ready";
       }
 
-      console.log(`[WhatsApp Client] Session marked as ready for user ${userId}`);
+      console.log(
+        `[WhatsApp Client] Session marked as ready for user ${userId}, waNumberRaw: ${waNumberRaw}, waDisplayName: ${waDisplayName}`
+      );
     } catch (error) {
       console.error(
         `[WhatsApp Client] Error updating ready status for user ${userId}:`,
