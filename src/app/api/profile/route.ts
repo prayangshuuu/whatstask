@@ -43,6 +43,7 @@ export async function GET() {
     const userData = await prisma.user.findUnique({
       where: { id: user.id },
       select: {
+        id: true,
         email: true,
         notifyNumber: true,
         webhookUrl: true,
@@ -57,6 +58,7 @@ export async function GET() {
     }
 
     return NextResponse.json({
+      id: userData.id,
       email: userData.email,
       notifyNumber: userData.notifyNumber,
       webhookUrl: userData.webhookUrl,

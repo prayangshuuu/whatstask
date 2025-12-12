@@ -33,7 +33,8 @@ export default function ProfilePage() {
           router.push("/login");
           return;
         }
-        throw new Error("Failed to fetch profile");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || "Failed to fetch profile");
       }
 
       const data = await response.json();
@@ -41,8 +42,8 @@ export default function ProfilePage() {
       setNotifyNumber(data.notifyNumber || "");
       setWebhookUrl(data.webhookUrl || "");
     } catch (err) {
-      setError("Failed to load profile");
-      console.error(err);
+      console.error("Profile load error:", err);
+      setError(err instanceof Error ? err.message : "Failed to load profile");
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function ProfilePage() {
       setNotifyNumber(data.notifyNumber || "");
       setWebhookUrl(data.webhookUrl || "");
       setSuccess("Profile updated successfully!");
-      
+
       // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {

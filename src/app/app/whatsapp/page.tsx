@@ -68,6 +68,25 @@ export default function WhatsAppPage() {
     return () => clearInterval(pollInterval);
   }, [session?.status]);
 
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const [notifyNumber, setNotifyNumber] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
+
+  const fetchProfile = async () => {
+    try {
+      const res = await fetch("/api/profile");
+      if (res.ok) {
+        const data = await res.json();
+        setNotifyNumber(data.notifyNumber);
+      }
+    } catch (e) {
+      console.error("Failed to fetch profile for whatsapp page", e);
+    }
+  };
+
   const fetchSession = async (setLoadingState = true) => {
     try {
       if (setLoadingState) {
@@ -105,6 +124,7 @@ export default function WhatsAppPage() {
   const handleStartQR = async () => {
     setSubmitting(true);
     setError("");
+    setSuccess(null);
 
     try {
       const response = await fetch("/api/whatsapp/session", {
@@ -136,7 +156,7 @@ export default function WhatsAppPage() {
         setSession(data);
       }
       setError(null);
-      
+
       // Polling will start automatically via useEffect when status becomes "connecting"
     } catch (err) {
       console.error("Error starting WhatsApp session:", err);
@@ -149,6 +169,7 @@ export default function WhatsAppPage() {
   const handleStopQR = async () => {
     setSubmitting(true);
     setError(null);
+    setSuccess(null);
 
     try {
       const response = await fetch("/api/whatsapp/stop", {
@@ -179,6 +200,7 @@ export default function WhatsAppPage() {
 
     setSubmitting(true);
     setError("");
+    setSuccess(null);
 
     try {
       const response = await fetch("/api/whatsapp/logout", {
@@ -195,6 +217,28 @@ export default function WhatsAppPage() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to logout");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleTestMessage = async () => {
+    setSubmitting(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      const res = await fetch("/api/whatsapp/test", { method: "POST" });
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to send test message");
+      }
+
+      setSuccess("Test message sent to your notification number.");
+      setTimeout(() => setSuccess(null), 5000);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send test message");
     } finally {
       setSubmitting(false);
     }
@@ -225,6 +269,12 @@ export default function WhatsAppPage() {
               Retry
             </button>
           </div>
+        </div>
+      )}
+
+      {success && (
+        <div className="rounded-md bg-green-50 p-4 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+          {success}
         </div>
       )}
 
@@ -294,6 +344,28 @@ export default function WhatsAppPage() {
                 </p>
               </div>
             </div>
+          </div>
+
+          {/* Test Message Section */}
+          <div className="mb-6 rounded-lg border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50">
+            <h4 className="font-medium text-black dark:text-zinc-50 mb-2">Test Notification</h4>
+            <p className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
+              Send a test message to your notification number to verify the setup.
+            </p>
+
+            {!notifyNumber ? (
+              <div className="rounded-md bg-yellow-50 p-3 text-sm text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-400 mb-2">
+                Please set your <strong>Notification Number</strong> in <Link href="/profile" className="underline">Profile</Link> settings first.
+              </div>
+            ) : (
+              <button
+                onClick={handleTestMessage}
+                disabled={submitting}
+                className="rounded-md bg-blue-600 px-4 py-2 font-medium text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {submitting ? "Sending..." : "Send Test Message"}
+              </button>
+            )}
           </div>
 
           {/* Logout Button */}
