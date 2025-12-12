@@ -362,8 +362,14 @@ export async function startWorker(): Promise<void> {
   }, 10_000);
 
   // Process reminders less frequently (every 60 seconds)
+  // Wrap in try-catch to prevent crashes if Todo table doesn't exist
   setInterval(async () => {
-    await processDueReminders();
+    try {
+      await processDueReminders();
+    } catch (err) {
+      console.error("[Worker] Error in reminder processing interval:", err);
+      // Don't crash the worker - WhatsApp sync is more important
+    }
   }, 60_000);
 
   console.log("Worker running: syncing WhatsApp every 10s, processing reminders every 60s");
