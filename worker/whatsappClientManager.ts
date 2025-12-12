@@ -47,8 +47,10 @@ async function startWhatsAppClientForUser(
 
   // Handle QR event: generate base64 and store in DB
   client.on("qr", async (qr) => {
+    console.log("QR event received for user", userId);
     try {
       const qrDataUrl = await qrcode.toDataURL(qr);
+      console.log("QR code generated as data URL for user", userId, "length:", qrDataUrl.length);
       await prisma.whatsAppSession.update({
         where: { userId },
         data: {
@@ -129,8 +131,15 @@ async function startWhatsAppClientForUser(
     }
   });
 
-  client.initialize();
+  // Store client in map before initializing
   clients.set(userId, client);
+  
+  // Initialize client (this is async but we don't await it - events will fire asynchronously)
+  client.initialize().catch((err) => {
+    console.error("Error initializing WhatsApp client for user", userId, err);
+    clients.delete(userId);
+  });
+  
   console.log("WhatsApp client initialized for user", userId);
 
   return client;
