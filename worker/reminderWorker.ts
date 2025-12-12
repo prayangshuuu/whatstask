@@ -110,9 +110,14 @@ async function syncWhatsAppClients(): Promise<void> {
     });
 
     console.log(`[Worker] Found ${sessions.length} active session(s) to sync`);
+    
+    // Debug: Log all session statuses if any exist
+    if (sessions.length > 0) {
+      console.log(`[Worker] Session details:`, sessions.map(s => `userId=${s.userId}, status=${s.status}`).join(", "));
+    }
 
     if (sessions.length === 0) {
-      console.log("[Worker] No active sessions found");
+      // Only log occasionally to avoid spam (every 10th check)
       return;
     }
 
