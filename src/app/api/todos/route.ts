@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
 import { RepeatType } from "@prisma/client";
 import { todoCreateSchema } from "@/lib/validation";
+import { computeDailyRemindAt, computeWeeklyRemindAt } from "@/lib/todoHelpers";
 
 export async function GET() {
   try {
@@ -58,11 +59,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, description, remindAt, repeatType, repeatDays } =
+    const { title, description, repeatType, remindAt, timeOfDay, repeatDays } =
       validationResult.data;
 
-    // Convert remindAt string to Date
-    const remindAtDate = new Date(remindAt);
+    // Compute remindAt based on repeatType
+    let remindAtDate: Date;
+    let finalRepeatDays: string | null = null;
+
+    if (repeatType === "NONE") {
+      // Use provided remindAt directly
+      remindAtDate = new Date(remindAt!);
+    } else if (repeatType === "DAILY") {
+      // Compute next occurrence from timeOfDay
+      remindAtDate = computeDailyRemindAt(timeOfDay!);
+    } else {
+      // WEEKLY: compute next occurrence from timeOfDay and repeatDays
+      const daysArray = Array.isArray(repeatDays)
+        ? repeatDays
+        : (repeatDays as string).split(",").map((d) => d.trim());
+      finalRepeatDays = daysArray.join(",");
+      remindAtDate = computeWeeklyRemindAt(timeOfDay!, daysArray);
+    }
 
     const todo = await prisma.todo.create({
       data: {
@@ -71,7 +88,7 @@ export async function POST(request: NextRequest) {
         description: description || null,
         remindAt: remindAtDate,
         repeatType: repeatType as RepeatType,
-        repeatDays: repeatDays || null,
+        repeatDays: finalRepeatDays,
         isCompleted: false,
       },
     });

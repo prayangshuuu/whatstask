@@ -34,13 +34,15 @@ export default function TodosPage() {
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [remindAt, setRemindAt] = useState("");
+  const [remindAt, setRemindAt] = useState(""); // For NONE only
+  const [timeOfDay, setTimeOfDay] = useState(""); // For DAILY/WEEKLY
   const [repeatType, setRepeatType] = useState<"NONE" | "DAILY" | "WEEKLY">("NONE");
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   
   // Edit state
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editRemindAt, setEditRemindAt] = useState("");
+  const [editRemindAt, setEditRemindAt] = useState(""); // For NONE only
+  const [editTimeOfDay, setEditTimeOfDay] = useState(""); // For DAILY/WEEKLY
   const [editRepeatType, setEditRepeatType] = useState<"NONE" | "DAILY" | "WEEKLY">("NONE");
   const [editSelectedDays, setEditSelectedDays] = useState<string[]>([]);
 
@@ -87,8 +89,19 @@ export default function TodosPage() {
     e.preventDefault();
     setError("");
     
-    if (!title.trim() || !remindAt) {
-      setError("Title and reminder time are required");
+    if (!title.trim()) {
+      setError("Title is required");
+      return;
+    }
+
+    // Validate based on repeatType
+    if (repeatType === "NONE" && !remindAt) {
+      setError("Reminder date and time are required for one-time reminders");
+      return;
+    }
+
+    if ((repeatType === "DAILY" || repeatType === "WEEKLY") && !timeOfDay) {
+      setError("Time is required for daily/weekly reminders");
       return;
     }
 
@@ -100,16 +113,26 @@ export default function TodosPage() {
     setSubmitting(true);
 
     try {
+      // Build request body based on repeatType
+      let requestBody: any = {
+        title: title.trim(),
+        description: description.trim() || null,
+        repeatType,
+      };
+
+      if (repeatType === "NONE") {
+        requestBody.remindAt = new Date(remindAt).toISOString();
+      } else if (repeatType === "DAILY") {
+        requestBody.timeOfDay = timeOfDay;
+      } else if (repeatType === "WEEKLY") {
+        requestBody.timeOfDay = timeOfDay;
+        requestBody.repeatDays = selectedDays;
+      }
+
       const response = await fetch("/api/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: title.trim(),
-          description: description.trim() || null,
-          remindAt: new Date(remindAt).toISOString(),
-          repeatType,
-          repeatDays: repeatType === "WEEKLY" ? selectedDays.join(",") : null,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -125,6 +148,7 @@ export default function TodosPage() {
       setTitle("");
       setDescription("");
       setRemindAt("");
+      setTimeOfDay("");
       setRepeatType("NONE");
       setSelectedDays([]);
       
@@ -174,21 +198,40 @@ export default function TodosPage() {
 
   const startEdit = (todo: Todo) => {
     setEditingId(todo.id);
-    setEditRemindAt(new Date(todo.remindAt).toISOString().slice(0, 16));
     setEditRepeatType(todo.repeatType);
+    
+    const remindAtDate = new Date(todo.remindAt);
+    if (todo.repeatType === "NONE") {
+      setEditRemindAt(remindAtDate.toISOString().slice(0, 16));
+      setEditTimeOfDay("");
+    } else {
+      // Extract time from remindAt for DAILY/WEEKLY
+      const hours = remindAtDate.getHours().toString().padStart(2, "0");
+      const minutes = remindAtDate.getMinutes().toString().padStart(2, "0");
+      setEditTimeOfDay(`${hours}:${minutes}`);
+      setEditRemindAt("");
+    }
+    
     setEditSelectedDays(todo.repeatDays ? todo.repeatDays.split(",") : []);
   };
 
   const cancelEdit = () => {
     setEditingId(null);
     setEditRemindAt("");
+    setEditTimeOfDay("");
     setEditRepeatType("NONE");
     setEditSelectedDays([]);
   };
 
   const handleSaveEdit = async (id: string) => {
-    if (!editRemindAt) {
-      setError("Reminder time is required");
+    // Validate based on repeatType
+    if (editRepeatType === "NONE" && !editRemindAt) {
+      setError("Reminder date and time are required for one-time reminders");
+      return;
+    }
+
+    if ((editRepeatType === "DAILY" || editRepeatType === "WEEKLY") && !editTimeOfDay) {
+      setError("Time is required for daily/weekly reminders");
       return;
     }
 
@@ -198,14 +241,24 @@ export default function TodosPage() {
     }
 
     try {
+      // Build request body based on repeatType
+      let requestBody: any = {
+        repeatType: editRepeatType,
+      };
+
+      if (editRepeatType === "NONE") {
+        requestBody.remindAt = new Date(editRemindAt).toISOString();
+      } else if (editRepeatType === "DAILY") {
+        requestBody.timeOfDay = editTimeOfDay;
+      } else if (editRepeatType === "WEEKLY") {
+        requestBody.timeOfDay = editTimeOfDay;
+        requestBody.repeatDays = editSelectedDays;
+      }
+
       const response = await fetch(`/api/todos/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          remindAt: new Date(editRemindAt).toISOString(),
-          repeatType: editRepeatType,
-          repeatDays: editRepeatType === "WEEKLY" ? editSelectedDays.join(",") : null,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
@@ -244,17 +297,24 @@ export default function TodosPage() {
     return lastNotified >= remindAt;
   };
 
-  const formatRepeatType = (type: string, repeatDays: string | null) => {
+  const formatRepeatType = (todo: Todo) => {
+    const type = todo.repeatType;
     switch (type) {
       case "NONE":
         return "One-time";
-      case "DAILY":
-        return "Daily";
-      case "WEEKLY":
-        if (repeatDays) {
-          return `Weekly (${repeatDays})`;
-        }
-        return "Weekly";
+      case "DAILY": {
+        const remindAtDate = new Date(todo.remindAt);
+        const hours = remindAtDate.getHours().toString().padStart(2, "0");
+        const minutes = remindAtDate.getMinutes().toString().padStart(2, "0");
+        return `Daily at ${hours}:${minutes}`;
+      }
+      case "WEEKLY": {
+        const remindAtDate = new Date(todo.remindAt);
+        const hours = remindAtDate.getHours().toString().padStart(2, "0");
+        const minutes = remindAtDate.getMinutes().toString().padStart(2, "0");
+        const days = todo.repeatDays || "";
+        return `Weekly on ${days} at ${hours}:${minutes}`;
+      }
       default:
         return type;
     }
@@ -336,26 +396,19 @@ export default function TodosPage() {
 
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Reminder Date & Time <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="datetime-local"
-              value={remindAt}
-              onChange={(e) => setRemindAt(e.target.value)}
-              required
-              className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Repeat Type
+              Repeat Type <span className="text-red-500">*</span>
             </label>
             <select
               value={repeatType}
               onChange={(e) => {
                 setRepeatType(e.target.value as "NONE" | "DAILY" | "WEEKLY");
                 if (e.target.value !== "WEEKLY") setSelectedDays([]);
+                // Clear fields when switching types
+                if (e.target.value === "NONE") {
+                  setTimeOfDay("");
+                } else {
+                  setRemindAt("");
+                }
               }}
               className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
             >
@@ -365,10 +418,43 @@ export default function TodosPage() {
             </select>
           </div>
 
+          {repeatType === "NONE" && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Reminder Date & Time <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="datetime-local"
+                value={remindAt}
+                onChange={(e) => setRemindAt(e.target.value)}
+                required
+                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+              />
+            </div>
+          )}
+
+          {(repeatType === "DAILY" || repeatType === "WEEKLY") && (
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Time <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="time"
+                value={timeOfDay}
+                onChange={(e) => setTimeOfDay(e.target.value)}
+                required
+                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+              />
+              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                The system will automatically calculate the next occurrence from now.
+              </p>
+            </div>
+          )}
+
           {repeatType === "WEEKLY" && (
             <div>
               <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
-                Select Days
+                Select Days <span className="text-red-500">*</span>
               </label>
               <div className="flex flex-wrap gap-2">
                 {DAYS.map((day) => (
@@ -501,7 +587,7 @@ export default function TodosPage() {
                         )}
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs">
                           <span className="text-zinc-500 dark:text-zinc-500">
-                            {formatRepeatType(todo.repeatType, todo.repeatDays)}
+                            {formatRepeatType(todo)}
                           </span>
                           <span className="text-zinc-400 dark:text-zinc-600">•</span>
                           <span
@@ -569,17 +655,6 @@ export default function TodosPage() {
                   <div className="mt-4 space-y-3 rounded-md border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-800/50">
                     <div>
                       <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                        Reminder Date & Time
-                      </label>
-                      <input
-                        type="datetime-local"
-                        value={editRemindAt}
-                        onChange={(e) => setEditRemindAt(e.target.value)}
-                        className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
                         Repeat Type
                       </label>
                       <select
@@ -590,6 +665,12 @@ export default function TodosPage() {
                           );
                           if (e.target.value !== "WEEKLY")
                             setEditSelectedDays([]);
+                          // Clear fields when switching types
+                          if (e.target.value === "NONE") {
+                            setEditTimeOfDay("");
+                          } else {
+                            setEditRemindAt("");
+                          }
                         }}
                         className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
                       >
@@ -598,6 +679,38 @@ export default function TodosPage() {
                         <option value="WEEKLY">Weekly</option>
                       </select>
                     </div>
+
+                    {editRepeatType === "NONE" && (
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Reminder Date & Time
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={editRemindAt}
+                          onChange={(e) => setEditRemindAt(e.target.value)}
+                          className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+                        />
+                      </div>
+                    )}
+
+                    {(editRepeatType === "DAILY" || editRepeatType === "WEEKLY") && (
+                      <div>
+                        <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                          Time
+                        </label>
+                        <input
+                          type="time"
+                          value={editTimeOfDay}
+                          onChange={(e) => setEditTimeOfDay(e.target.value)}
+                          className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
+                        />
+                        <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                          The system will automatically calculate the next occurrence from now.
+                        </p>
+                      </div>
+                    )}
+
                     {editRepeatType === "WEEKLY" && (
                       <div>
                         <label className="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-2">

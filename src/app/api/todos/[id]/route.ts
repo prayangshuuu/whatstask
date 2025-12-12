@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
 import { RepeatType } from "@prisma/client";
 import { todoUpdateSchema } from "@/lib/validation";
+import { computeDailyRemindAt, computeWeeklyRemindAt } from "@/lib/todoHelpers";
 
 export async function GET(
   request: NextRequest,
@@ -93,6 +94,9 @@ export async function PATCH(
 
     const validatedData = validationResult.data;
 
+    // Determine the effective repeatType (use new value if provided, otherwise existing)
+    const effectiveRepeatType = validatedData.repeatType ?? existingTodo.repeatType;
+
     // Build update data, excluding lastNotifiedAt
     const updateData: {
       title?: string;
@@ -111,17 +115,66 @@ export async function PATCH(
       updateData.description = validatedData.description || null;
     }
 
-    if (validatedData.remindAt !== undefined) {
-      // Convert remindAt string to Date
-      updateData.remindAt = new Date(validatedData.remindAt);
-    }
-
     if (validatedData.repeatType !== undefined) {
       updateData.repeatType = validatedData.repeatType as RepeatType;
     }
 
-    if (validatedData.repeatDays !== undefined) {
-      updateData.repeatDays = validatedData.repeatDays || null;
+    // Handle remindAt computation based on repeatType
+    if (effectiveRepeatType === "NONE") {
+      // For NONE, require remindAt in request
+      if (validatedData.remindAt !== undefined) {
+        updateData.remindAt = new Date(validatedData.remindAt);
+      } else if (validatedData.repeatType === "NONE" && existingTodo.repeatType !== "NONE") {
+        // Switching to NONE but no remindAt provided
+        return NextResponse.json(
+          { error: "remindAt is required when repeatType is NONE" },
+          { status: 400 }
+        );
+      }
+    } else if (effectiveRepeatType === "DAILY") {
+      // For DAILY, compute from timeOfDay
+      if (validatedData.timeOfDay !== undefined) {
+        updateData.remindAt = computeDailyRemindAt(validatedData.timeOfDay);
+      } else if (validatedData.repeatType === "DAILY" && existingTodo.repeatType !== "DAILY") {
+        // Switching to DAILY but no timeOfDay provided
+        return NextResponse.json(
+          { error: "timeOfDay is required when repeatType is DAILY" },
+          { status: 400 }
+        );
+      } else if (validatedData.repeatType === undefined && validatedData.timeOfDay === undefined) {
+        // Updating existing DAILY todo - keep current remindAt if timeOfDay not changed
+        // (remindAt will be updated by worker on next send)
+      }
+      updateData.repeatDays = null;
+    } else if (effectiveRepeatType === "WEEKLY") {
+      // For WEEKLY, compute from timeOfDay and repeatDays
+      if (validatedData.timeOfDay !== undefined && validatedData.repeatDays !== undefined && validatedData.repeatDays !== null) {
+        const daysArray = Array.isArray(validatedData.repeatDays)
+          ? validatedData.repeatDays
+          : validatedData.repeatDays.split(",").map((d) => d.trim());
+        updateData.remindAt = computeWeeklyRemindAt(validatedData.timeOfDay, daysArray);
+        updateData.repeatDays = daysArray.join(",");
+      } else if (validatedData.repeatType === "WEEKLY" && existingTodo.repeatType !== "WEEKLY") {
+        // Switching to WEEKLY but missing required fields
+        return NextResponse.json(
+          { error: "timeOfDay and repeatDays are required when repeatType is WEEKLY" },
+          { status: 400 }
+        );
+      } else if (validatedData.repeatDays !== undefined && validatedData.repeatDays !== null) {
+        // Updating repeatDays only
+        const daysArray = Array.isArray(validatedData.repeatDays)
+          ? validatedData.repeatDays
+          : validatedData.repeatDays.split(",").map((d) => d.trim());
+        updateData.repeatDays = daysArray.join(",");
+        // Recompute remindAt if timeOfDay is also provided or use existing time
+        if (validatedData.timeOfDay !== undefined) {
+          updateData.remindAt = computeWeeklyRemindAt(validatedData.timeOfDay, daysArray);
+        } else {
+          // Use existing remindAt time but recompute with new days
+          const existingTime = `${existingTodo.remindAt.getHours().toString().padStart(2, "0")}:${existingTodo.remindAt.getMinutes().toString().padStart(2, "0")}`;
+          updateData.remindAt = computeWeeklyRemindAt(existingTime, daysArray);
+        }
+      }
     }
 
     if (validatedData.isCompleted !== undefined) {
