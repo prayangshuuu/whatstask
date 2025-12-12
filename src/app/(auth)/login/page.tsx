@@ -30,7 +30,13 @@ export default function LoginPage() {
         if (data.details && Array.isArray(data.details) && data.details.length > 0) {
           setError(data.details[0].message || data.error || "Validation failed");
         } else {
-          setError(data.error || "Login failed");
+          // Show user-friendly error messages
+          const errorMsg = data.error || "Login failed";
+          if (errorMsg.toLowerCase().includes("invalid") || errorMsg.toLowerCase().includes("password")) {
+            setError("Invalid email or password");
+          } else {
+            setError(errorMsg);
+          }
         }
         setIsLoading(false);
         return;

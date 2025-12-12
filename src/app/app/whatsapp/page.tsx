@@ -129,7 +129,15 @@ export default function WhatsAppPage() {
 
       {error && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-          {error}
+          <div className="flex items-center justify-between">
+            <span>{error}</span>
+            <button
+              onClick={fetchSession}
+              className="ml-4 rounded-md bg-red-100 px-3 py-1 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
+            >
+              Retry
+            </button>
+          </div>
         </div>
       )}
 

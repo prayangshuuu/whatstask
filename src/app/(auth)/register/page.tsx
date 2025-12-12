@@ -37,7 +37,13 @@ export default function RegisterPage() {
         if (data.details && Array.isArray(data.details) && data.details.length > 0) {
           setError(data.details[0].message || data.error || "Validation failed");
         } else {
-          setError(data.error || "Registration failed");
+          // Show user-friendly error messages
+          const errorMsg = data.error || "Registration failed";
+          if (errorMsg.toLowerCase().includes("already") || errorMsg.toLowerCase().includes("exists")) {
+            setError("Email already in use");
+          } else {
+            setError(errorMsg);
+          }
         }
         setIsLoading(false);
         return;

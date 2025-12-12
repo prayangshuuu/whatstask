@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
-import LogoutButton from "./logout-button";
 import Link from "next/link";
+import ProfileMenu from "@/components/ProfileMenu";
 
 export default async function AppLayout({
   children,
@@ -53,10 +53,7 @@ export default async function AppLayout({
             </nav>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-zinc-600 dark:text-zinc-400">
-              {user.email}
-            </span>
-            <LogoutButton />
+            {user && <ProfileMenu email={user.email} />}
           </div>
         </div>
       </header>
