@@ -15,7 +15,8 @@ WhatsTask is a smart to-do and reminder engine that sends instant notifications 
 ## High-Level Features
 
 - User authentication with email + password (custom implementation using bcrypt + jose)
-- Connect exactly one WhatsApp number per user
+- Connect exactly one WhatsApp number per user (for login/authentication)
+- Set a separate notification number in your profile (where reminders are actually sent)
 - Create to-do items and reminders with:
   - Single reminder time (one-time)
   - Recurring schedules (daily, or specific weekdays)
@@ -74,7 +75,9 @@ The application uses the following main models:
 
 ### User
 - Stores user authentication information (email, password hash)
+- `notifyNumber`: Optional field for the WhatsApp number where reminders will be sent
 - Each user can have multiple todos and one WhatsApp session
+- **Important**: The notification number (`notifyNumber`) is separate from the WhatsApp login number (`WhatsAppSession.phoneNumber`). This allows using one device/business number for login and a different personal number for receiving reminders.
 
 ### Todo
 - Stores reminder tasks with scheduling information
@@ -150,6 +153,15 @@ The worker provides detailed logging:
 - Success messages when reminders would be sent
 - Processing duration metrics
 
+### How Reminders Are Sent
+
+- **WhatsApp Login**: Uses `WhatsAppSession.phoneNumber` - this is the device/business account used to authenticate with WhatsApp Web
+- **Reminder Delivery**: Uses `User.notifyNumber` - this is the personal WhatsApp number where reminder messages are actually sent
+- **Separation of Concerns**: This design allows you to:
+  - Use a business/device number for WhatsApp Web login (stored in `WhatsAppSession.phoneNumber`)
+  - Receive reminders on your personal number (stored in `User.notifyNumber`)
+- **Safety**: If `notifyNumber` is not set, reminders are skipped with clear logging. Users are prompted to set their notification number in the Profile page.
+
 ### Future Integration
 
-Currently, the worker logs what would be sent (e.g., "Would send WhatsApp reminder to +1234567890 for todo 'Eat lunch'"). A future step is to plug in `whatsapp-web.js` to actually send WhatsApp messages where logs currently say "would send". The worker is designed to be easily extended with actual WhatsApp sending functionality.
+The worker is fully integrated with `whatsapp-web.js` and sends real WhatsApp messages. Reminders are sent to the user's notification number (`User.notifyNumber`) when their WhatsApp session is ready.

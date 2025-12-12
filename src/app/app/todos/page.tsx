@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { formatDateTime } from "@/lib/formatDate";
 
 interface Todo {
@@ -28,6 +29,7 @@ export default function TodosPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState<FilterType>("ALL");
+  const [hasNotifyNumber, setHasNotifyNumber] = useState<boolean | null>(null);
   
   // Form state
   const [title, setTitle] = useState("");
@@ -44,7 +46,21 @@ export default function TodosPage() {
 
   useEffect(() => {
     fetchTodos();
+    checkNotifyNumber();
   }, []);
+
+  const checkNotifyNumber = async () => {
+    try {
+      const response = await fetch("/api/profile");
+      if (response.ok) {
+        const data = await response.json();
+        setHasNotifyNumber(!!data.notifyNumber);
+      }
+    } catch (err) {
+      // Silently fail - this is just a hint
+      console.error("Failed to check notify number:", err);
+    }
+  };
 
   const fetchTodos = async () => {
     try {
@@ -269,6 +285,21 @@ export default function TodosPage() {
       {error && (
         <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
           {error}
+        </div>
+      )}
+
+      {hasNotifyNumber === false && (
+        <div className="rounded-md bg-blue-50 p-4 text-sm text-blue-800 dark:bg-blue-900/20 dark:text-blue-400">
+          <p>
+            You haven't set a Notification Number yet.{" "}
+            <Link
+              href="/app/profile"
+              className="font-medium underline hover:text-blue-900 dark:hover:text-blue-300"
+            >
+              Go to Profile
+            </Link>{" "}
+            to set the WhatsApp number where reminders will be sent.
+          </p>
         </div>
       )}
 

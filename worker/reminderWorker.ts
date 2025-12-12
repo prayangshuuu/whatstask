@@ -7,14 +7,17 @@ import { Client } from "whatsapp-web.js";
 dotenv.config();
 
 /**
- * Normalize phone number to WhatsApp JID format.
- * Converts phone number like "+8801234567890" to "8801234567890@c.us"
- * TODO: Add better normalization (handle country codes, remove spaces/dashes, etc.)
+ * Build WhatsApp JID from a raw phone number string.
+ * Strips non-digits and appends @c.us suffix.
+ * Assumes the number already includes country code (e.g., 8801...).
+ * TODO: Add more robust handling (country code validation, etc.)
  */
-function normalizePhoneToJid(phoneNumber: string): string {
-  // Remove all non-digit characters and add @c.us suffix
-  const digitsOnly = phoneNumber.replace(/[^0-9]/g, "");
-  return `${digitsOnly}@c.us`;
+function buildWhatsAppJidFromNumber(raw: string): string {
+  // Strip non-digits
+  const digits = raw.replace(/\D/g, "");
+  // Assume it already includes country code like 8801...
+  // TODO: more robust handling later
+  return digits + "@c.us";
 }
 
 /**
@@ -23,15 +26,15 @@ function normalizePhoneToJid(phoneNumber: string): string {
  */
 async function sendWhatsAppMessage(
   client: Client,
-  phoneNumber: string,
+  notifyNumber: string,
   message: string
 ): Promise<boolean> {
   try {
-    const jid = normalizePhoneToJid(phoneNumber);
+    const jid = buildWhatsAppJidFromNumber(notifyNumber);
     await client.sendMessage(jid, message);
     return true;
   } catch (error) {
-    console.error(`[WhatsApp] Error sending message to ${phoneNumber}:`, error);
+    console.error(`[WhatsApp] Error sending message to ${notifyNumber}:`, error);
     return false;
   }
 }
@@ -240,6 +243,14 @@ async function processDueReminders(): Promise<void> {
         continue;
       }
 
+      // Check if user has notification number set
+      if (!user.notifyNumber || user.notifyNumber.trim() === "") {
+        console.warn(
+          `[Worker] ⚠️  User has no notifyNumber; not sending reminder for todo "${todo.title}" (ID: ${todo.id}). User: ${user.email}`
+        );
+        continue;
+      }
+
       // Prepare reminder message
       const message = `⏰ Reminder: ${todo.title}${
         todo.description ? `\n\n${todo.description}` : ""
@@ -247,13 +258,13 @@ async function processDueReminders(): Promise<void> {
 
       // Log before sending
       console.log(
-        `[Worker] 📤 Sending WhatsApp reminder for user ${user.email}, todo "${todo.title}" to ${whatsappSession.phoneNumber}`
+        `[Worker] 📤 Sending WhatsApp reminder to ${user.notifyNumber} for todo "${todo.title}" (ID: ${todo.id})`
       );
 
       // Send WhatsApp message
       const sendSuccess = await sendWhatsAppMessage(
         client,
-        whatsappSession.phoneNumber,
+        user.notifyNumber,
         message
       );
 
