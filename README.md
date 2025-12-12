@@ -21,7 +21,7 @@ WhatsTask is a smart to-do and reminder engine that sends instant notifications 
   - Single reminder time (one-time)
   - Recurring schedules (daily, or specific weekdays)
 - Instant WhatsApp notifications at scheduled reminder times
-- Asynchronous worker system for message delivery
+- API-based reminder processing (can be triggered manually or via cron)
 
 ## Setup
 
