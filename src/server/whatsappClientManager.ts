@@ -23,14 +23,31 @@ export async function startWhatsAppClientForUser(
     return existingClient;
   }
 
-  // Find session row
-  const session = await prisma.whatsAppSession.findUnique({
+  // Ensure session row exists - create or update it
+  let session = await prisma.whatsAppSession.findUnique({
     where: { userId },
   });
 
   if (!session) {
-    console.warn(`[WhatsApp Client] No WhatsAppSession row for user ${userId}, cannot start client`);
-    return null;
+    // Create session if it doesn't exist
+    console.log(`[WhatsApp Client] Creating WhatsAppSession row for user ${userId}`);
+    session = await prisma.whatsAppSession.create({
+      data: {
+        userId,
+        phoneNumber: null,
+        status: "connecting",
+        qrData: null,
+      },
+    });
+  } else {
+    // Update existing session to connecting state
+    await prisma.whatsAppSession.update({
+      where: { userId },
+      data: {
+        status: "connecting",
+        qrData: null,
+      },
+    });
   }
 
   console.log(`[WhatsApp Client] Creating client for user ${userId}, session status: ${session.status}`);

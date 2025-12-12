@@ -232,7 +232,7 @@ export default function WhatsAppPage() {
         <div className="rounded-lg border border-zinc-200 bg-white p-8 text-center dark:border-zinc-800 dark:bg-zinc-900">
           <p className="text-zinc-600 dark:text-zinc-400">Loading WhatsApp status...</p>
         </div>
-      ) : !session || session.status === "none" ? (
+      ) : !session || session.status === "none" || session.status === "disconnected" || session.status === "error" ? (
         // No session - show "Scan WhatsApp QR" button
         <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
           <div className="text-center">
