@@ -22,6 +22,9 @@ export async function GET() {
         qrData: true,
         lastQrAt: true,
         lastConnectedAt: true,
+        waNumberRaw: true,
+        waDisplayName: true,
+        waProfilePicUrl: true,
         createdAt: true,
         updatedAt: true,
       },
@@ -70,32 +73,82 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upsert: create if doesn't exist, update if exists
-    // Set status to "connecting" to trigger worker to start client
-    const session = await prisma.whatsAppSession.upsert({
+    // Check if session exists and its current status
+    const existingSession = await prisma.whatsAppSession.findUnique({
       where: { userId: user.id },
-      update: {
-        phoneNumber,
-        status: "connecting",
-        qrData: null, // Clear any existing QR code
-      },
-      create: {
-        userId: user.id,
-        phoneNumber,
-        status: "connecting",
-        qrData: null,
-      },
-      select: {
-        id: true,
-        phoneNumber: true,
-        status: true,
-        qrData: true,
-        lastQrAt: true,
-        lastConnectedAt: true,
-        createdAt: true,
-        updatedAt: true,
-      },
     });
+
+    let session;
+    if (!existingSession) {
+      // Create new session with status "connecting"
+      session = await prisma.whatsAppSession.create({
+        data: {
+          userId: user.id,
+          phoneNumber,
+          status: "connecting",
+          qrData: null,
+        },
+        select: {
+          id: true,
+          phoneNumber: true,
+          status: true,
+          qrData: true,
+          lastQrAt: true,
+          lastConnectedAt: true,
+          waNumberRaw: true,
+          waDisplayName: true,
+          waProfilePicUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } else if (existingSession.status === "ready") {
+      // If already ready, allow reconnection by resetting to "connecting"
+      session = await prisma.whatsAppSession.update({
+        where: { userId: user.id },
+        data: {
+          phoneNumber,
+          status: "connecting",
+          qrData: null,
+        },
+        select: {
+          id: true,
+          phoneNumber: true,
+          status: true,
+          qrData: true,
+          lastQrAt: true,
+          lastConnectedAt: true,
+          waNumberRaw: true,
+          waDisplayName: true,
+          waProfilePicUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    } else {
+      // Update existing session that's not ready
+      session = await prisma.whatsAppSession.update({
+        where: { userId: user.id },
+        data: {
+          phoneNumber,
+          status: "connecting",
+          qrData: null,
+        },
+        select: {
+          id: true,
+          phoneNumber: true,
+          status: true,
+          qrData: true,
+          lastQrAt: true,
+          lastConnectedAt: true,
+          waNumberRaw: true,
+          waDisplayName: true,
+          waProfilePicUrl: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+    }
 
     return NextResponse.json(session, { status: 200 });
   } catch (error) {
