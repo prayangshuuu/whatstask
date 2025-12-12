@@ -6,8 +6,7 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "worker": "tsx worker/reminderWorker.ts"
+    "lint": "eslint"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.1.0",

@@ -143,7 +143,7 @@ export async function PATCH(
         );
       } else if (validatedData.repeatType === undefined && validatedData.timeOfDay === undefined) {
         // Updating existing DAILY todo - keep current remindAt if timeOfDay not changed
-        // (remindAt will be updated by worker on next send)
+        // (remindAt will be updated when reminder is processed)
       }
       updateData.repeatDays = null;
     } else if (effectiveRepeatType === "WEEKLY") {

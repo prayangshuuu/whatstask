@@ -130,10 +130,12 @@ The worker will:
 
 ### WhatsApp Session Sync
 
-The worker automatically manages WhatsApp client connections:
+### WhatsApp Client Management
 
-- **Automatic Client Management**: Every 60 seconds, the worker checks for WhatsAppSession rows with status `"connecting"`, `"qr_pending"`, or `"ready"` and ensures they have active whatsapp-web.js clients
-- **QR Code Generation**: When a session has status `"connecting"`, the worker starts a client which generates a QR code. On QR event:
+WhatsApp clients are started directly from the API when a user clicks "Scan WhatsApp QR":
+
+- **Direct Client Initialization**: When `/api/whatsapp/session` POST is called, it immediately starts a whatsapp-web.js client for that user
+- **QR Code Generation**: The client generates a QR code asynchronously. On QR event:
   - `status` is set to `"qr_pending"`
   - `qrData` is stored as a base64-encoded image data URL
   - `lastQrAt` is updated
@@ -164,4 +166,8 @@ The worker provides detailed logging:
 
 ### Future Integration
 
-The worker is fully integrated with `whatsapp-web.js` and sends real WhatsApp messages. Reminders are sent to the user's notification number (`User.notifyNumber`) when their WhatsApp session is ready.
+The reminder processor is fully integrated with `whatsapp-web.js` and sends real WhatsApp messages. Reminders are sent to the user's notification number (`User.notifyNumber`) when their WhatsApp session is ready.
+
+### Setting Up Automated Reminders
+
+To run reminders automatically, you can set up an external cron job or scheduled task that calls `POST /api/reminders/process` at regular intervals (e.g., every minute).

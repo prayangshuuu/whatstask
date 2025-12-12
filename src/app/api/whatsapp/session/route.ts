@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
+import { startWhatsAppClientForUser } from "@/server/whatsappClientManager";
 
 export async function GET() {
   try {
@@ -95,6 +96,17 @@ export async function POST() {
           waProfilePicUrl: true,
         },
       });
+    }
+
+    // IMPORTANT: Start the WhatsApp client directly here (no worker needed)
+    // The client will emit "qr" event asynchronously and update the DB
+    console.log(`[API] Starting WhatsApp client for user ${user.id}...`);
+    try {
+      await startWhatsAppClientForUser(user.id);
+      console.log(`[API] WhatsApp client initialization started for user ${user.id}`);
+    } catch (err) {
+      console.error(`[API] Failed to start WhatsApp client for user ${user.id}:`, err);
+      // Don't fail the request - client might still initialize
     }
 
     return NextResponse.json(session, { status: 200 });
