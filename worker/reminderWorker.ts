@@ -356,12 +356,17 @@ export async function startWorker(): Promise<void> {
 
   await syncWhatsAppClients(); // initial run
 
+  // Sync WhatsApp clients more frequently (every 10 seconds) to catch new connections quickly
   setInterval(async () => {
     await syncWhatsAppClients();
+  }, 10_000);
+
+  // Process reminders less frequently (every 60 seconds)
+  setInterval(async () => {
     await processDueReminders();
   }, 60_000);
 
-  console.log("Worker running: syncing WhatsApp and processing reminders every 60s");
+  console.log("Worker running: syncing WhatsApp every 10s, processing reminders every 60s");
 }
 
 // Run worker if this file is executed directly
