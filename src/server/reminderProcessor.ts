@@ -141,22 +141,33 @@ export async function processDueReminders(): Promise<void> {
           continue;
         }
 
-        // Build message
-        const repeatLabel =
-          todo.repeatType === "DAILY"
-            ? " (Daily)"
-            : todo.repeatType === "WEEKLY"
-            ? " (Weekly)"
-            : "";
-        const message =
-          "⏰ Reminder: " +
-          todo.title +
-          repeatLabel +
-          (todo.description ? "\n\n" + todo.description : "") +
-          "\n\nSent via WhatsTask";
+        // Build message - use AI-generated message if available, otherwise use standard format
+        let message: string;
+        let isAIMessage = false;
+        
+        if (todo.aiMessage && todo.aiMessage.trim()) {
+          // Use AI-generated message
+          message = todo.aiMessage.trim();
+          isAIMessage = true;
+        } else {
+          // Fall back to standard format
+          const repeatLabel =
+            todo.repeatType === "DAILY"
+              ? " (Daily)"
+              : todo.repeatType === "WEEKLY"
+              ? " (Weekly)"
+              : "";
+          message =
+            "⏰ Reminder: " +
+            todo.title +
+            repeatLabel +
+            (todo.description ? "\n\n" + todo.description : "") +
+            "\n\nSent via WhatsTask";
+        }
 
         // Send message
-        console.log(`[Reminder Processor] 📤 Sending reminder: "${todo.title}" to ${todo.user.notifyNumber}`);
+        const messageType = isAIMessage ? "AI-generated" : "standard";
+        console.log(`[Reminder Processor] 📤 Sending ${messageType} reminder: "${todo.title}" to ${todo.user.notifyNumber}`);
 
         const sent = await sendWhatsAppMessage(
           client,
