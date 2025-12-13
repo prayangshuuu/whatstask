@@ -25,7 +25,13 @@ export async function sendTodoMessageNow(todoId: string) {
     // Fetch todo with user data
     const todo = await prisma.todo.findUnique({
       where: { id: todoId },
-      include: {
+      select: {
+        id: true,
+        userId: true,
+        title: true,
+        description: true,
+        repeatType: true,
+        aiMessage: true,
         user: {
           select: {
             id: true,
