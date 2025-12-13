@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/formatDate";
-import { generateTodoFromAI } from "@/app/actions/ai-todo";
+import { generateBulkTodosFromAI } from "@/app/actions/ai-todo";
+import { generateTodoFromAI, generateBulkTodosFromAI } from "@/app/actions/ai-todo";
 
 interface Todo {
   id: string;
@@ -38,6 +39,20 @@ export default function TodosPage() {
   const [generating, setGenerating] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
   const [aiMessage, setAiMessage] = useState("");
+  
+  // Bulk AI state
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkPrompt, setBulkPrompt] = useState("");
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [proposedTodos, setProposedTodos] = useState<Array<{ data: any; selected: boolean }>>([]);
+  const [bulkCreating, setBulkCreating] = useState(false);
+  
+  // Bulk AI state
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [bulkPrompt, setBulkPrompt] = useState("");
+  const [bulkGenerating, setBulkGenerating] = useState(false);
+  const [proposedTodos, setProposedTodos] = useState<Array<{ data: any; selected: boolean }>>([]);
+  const [bulkCreating, setBulkCreating] = useState(false);
   
   // Form state
   const [title, setTitle] = useState("");
@@ -388,6 +403,108 @@ export default function TodosPage() {
     }
   };
 
+  // Handle bulk AI generation
+  const handleBulkAIGenerate = async () => {
+    if (!bulkPrompt.trim()) {
+      setError("Please enter your plan description");
+      return;
+    }
+
+    if (!userId) {
+      setError("User ID not found. Please refresh the page.");
+      return;
+    }
+
+    setBulkGenerating(true);
+    setError("");
+
+    try {
+      const results = await generateBulkTodosFromAI(userId, bulkPrompt);
+      
+      // Initialize all as selected
+      setProposedTodos(results.map((todo) => ({ data: todo, selected: true })));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate todos with AI");
+    } finally {
+      setBulkGenerating(false);
+    }
+  };
+
+  // Toggle selection of proposed todo
+  const toggleProposedTodo = (index: number) => {
+    setProposedTodos((prev) => {
+      const updated = [...prev];
+      updated[index].selected = !updated[index].selected;
+      return updated;
+    });
+  };
+
+  // Handle bulk create
+  const handleBulkCreate = async () => {
+    const selectedTodos = proposedTodos.filter((pt) => pt.selected);
+    
+    if (selectedTodos.length === 0) {
+      setError("Please select at least one todo to create");
+      return;
+    }
+
+    setBulkCreating(true);
+    setError("");
+
+    try {
+      // Create todos one by one (could be optimized with a bulk API endpoint)
+      for (const proposedTodo of selectedTodos) {
+        const todo = proposedTodo.data;
+        
+        // Build request body based on repeatType
+        let requestBody: any = {
+          title: todo.title,
+          description: todo.description || null,
+          repeatType: todo.repeat,
+          aiMessage: todo.aiMessage || null,
+        };
+
+        const remindAtDate = new Date(todo.remindAt);
+        
+        if (todo.repeat === "NONE") {
+          requestBody.remindAt = remindAtDate.toISOString();
+        } else if (todo.repeat === "DAILY") {
+          const hours = remindAtDate.getHours().toString().padStart(2, "0");
+          const minutes = remindAtDate.getMinutes().toString().padStart(2, "0");
+          requestBody.timeOfDay = `${hours}:${minutes}`;
+        } else if (todo.repeat === "WEEKLY") {
+          const hours = remindAtDate.getHours().toString().padStart(2, "0");
+          const minutes = remindAtDate.getMinutes().toString().padStart(2, "0");
+          requestBody.timeOfDay = `${hours}:${minutes}`;
+          // Extract day of week from remindAt date
+          const dayIndex = remindAtDate.getDay();
+          requestBody.repeatDays = [DAYS[dayIndex]];
+        }
+
+        const response = await fetch("/api/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(requestBody),
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.error || "Failed to create todo");
+        }
+      }
+
+      // Close modal and refresh
+      setShowBulkModal(false);
+      setBulkPrompt("");
+      setProposedTodos([]);
+      await fetchTodos();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create todos");
+    } finally {
+      setBulkCreating(false);
+    }
+  };
+
   // Filter todos based on selected filter
   const filteredTodos = todos.filter((todo) => {
     if (filter === "PENDING") {
@@ -674,8 +791,21 @@ export default function TodosPage() {
             <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
               Your Todos
             </h3>
-            {/* Filter Buttons */}
-            <div className="flex gap-2">
+            <div className="flex items-center gap-3">
+              {/* Bulk AI Button */}
+              <button
+                onClick={() => {
+                  setShowBulkModal(true);
+                  setBulkPrompt("");
+                  setProposedTodos([]);
+                  setError("");
+                }}
+                className="rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-medium text-white shadow-md transition-all hover:from-purple-700 hover:to-pink-700"
+              >
+                🤖 AI Bulk Plan
+              </button>
+              {/* Filter Buttons */}
+              <div className="flex gap-2">
               {(["ALL", "PENDING", "COMPLETED"] as FilterType[]).map((filterType) => (
                 <button
                   key={filterType}
@@ -689,6 +819,7 @@ export default function TodosPage() {
                   {filterType}
                 </button>
               ))}
+              </div>
             </div>
           </div>
         </div>
@@ -923,6 +1054,172 @@ export default function TodosPage() {
           </div>
         )}
       </div>
+
+      {/* Bulk AI Modal */}
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-4xl max-h-[90vh] overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="sticky top-0 border-b border-zinc-200 bg-white px-6 py-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <div className="flex items-center justify-between">
+                <h3 className="text-xl font-semibold text-black dark:text-zinc-50">
+                  🤖 AI Bulk Plan
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowBulkModal(false);
+                    setBulkPrompt("");
+                    setProposedTodos([]);
+                    setError("");
+                  }}
+                  className="rounded-md p-2 text-zinc-500 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800"
+                >
+                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {proposedTodos.length === 0 ? (
+                /* Input Phase */
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-2">
+                      Describe your plan
+                    </label>
+                    <textarea
+                      value={bulkPrompt}
+                      onChange={(e) => setBulkPrompt(e.target.value)}
+                      placeholder="Plan my week: Gym Mon/Wed/Fri at 7am, Call Mom Sunday at 2pm, Buy groceries tomorrow."
+                      rows={6}
+                      className="w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-purple-400 dark:focus:ring-purple-400"
+                    />
+                  </div>
+                  <button
+                    onClick={handleBulkAIGenerate}
+                    disabled={bulkGenerating || !bulkPrompt.trim()}
+                    className="w-full rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 font-medium text-white shadow-md transition-all hover:from-purple-700 hover:to-pink-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {bulkGenerating ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Generating todos...
+                      </span>
+                    ) : (
+                      "✨ Generate Todos"
+                    )}
+                  </button>
+                </div>
+              ) : (
+                /* Results Phase */
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-lg font-semibold text-black dark:text-zinc-50">
+                      Proposed Todos ({proposedTodos.filter((pt) => pt.selected).length} selected)
+                    </h4>
+                    <button
+                      onClick={() => {
+                        setProposedTodos((prev) => prev.map((pt) => ({ ...pt, selected: !pt.selected })));
+                      }}
+                      className="text-sm text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300"
+                    >
+                      {proposedTodos.every((pt) => pt.selected) ? "Deselect All" : "Select All"}
+                    </button>
+                  </div>
+
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto">
+                    {proposedTodos.map((proposedTodo, index) => {
+                      const todo = proposedTodo.data;
+                      const remindAtDate = new Date(todo.remindAt);
+                      return (
+                        <div
+                          key={index}
+                          className={`rounded-lg border-2 p-4 transition-all ${
+                            proposedTodo.selected
+                              ? "border-purple-300 bg-purple-50 dark:border-purple-700 dark:bg-purple-900/20"
+                              : "border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-800/50 opacity-60"
+                          }`}
+                        >
+                          <div className="flex items-start gap-3">
+                            <input
+                              type="checkbox"
+                              checked={proposedTodo.selected}
+                              onChange={() => toggleProposedTodo(index)}
+                              className="mt-1 h-4 w-4 rounded border-zinc-300 text-purple-600 focus:ring-purple-500"
+                            />
+                            <div className="flex-1 min-w-0">
+                              <h5 className="font-semibold text-black dark:text-zinc-50">
+                                {todo.title}
+                              </h5>
+                              {todo.description && (
+                                <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+                                  {todo.description}
+                                </p>
+                              )}
+                              <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                <span className="rounded-full bg-purple-100 px-2 py-1 text-purple-800 dark:bg-purple-900/40 dark:text-purple-300">
+                                  {todo.repeat === "NONE" ? "One-time" : todo.repeat === "DAILY" ? "Daily" : "Weekly"}
+                                </span>
+                                <span className="text-zinc-500 dark:text-zinc-400">
+                                  {formatDateTime(todo.remindAt)}
+                                </span>
+                              </div>
+                              {todo.aiMessage && (
+                                <div className="mt-3 rounded-md border border-purple-200 bg-white p-3 dark:border-purple-800 dark:bg-zinc-800">
+                                  <div className="mb-1 flex items-center gap-1 text-xs font-medium text-purple-700 dark:text-purple-300">
+                                    <span>💬</span>
+                                    <span>WhatsApp Message</span>
+                                  </div>
+                                  <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                                    {todo.aiMessage}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  <div className="flex gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                      onClick={() => {
+                        setProposedTodos([]);
+                        setBulkPrompt("");
+                      }}
+                      className="flex-1 rounded-md border border-zinc-300 px-4 py-2 font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
+                    >
+                      Start Over
+                    </button>
+                    <button
+                      onClick={handleBulkCreate}
+                      disabled={bulkCreating || proposedTodos.filter((pt) => pt.selected).length === 0}
+                      className="flex-1 rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 font-medium text-white shadow-md transition-all hover:from-purple-700 hover:to-pink-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {bulkCreating ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Creating...
+                        </span>
+                      ) : (
+                        `Confirm & Create All (${proposedTodos.filter((pt) => pt.selected).length})`
+                      )}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
