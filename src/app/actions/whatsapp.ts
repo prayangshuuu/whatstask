@@ -62,64 +62,74 @@ export async function sendTodoMessageNow(todoId: string) {
           let attempts = 0;
           const maxAttempts = 20; // 10 seconds max
           while (attempts < maxAttempts) {
-            // Check if client has info (means it's connected)
+            try {
+              const state = await reconnectedClient.getState();
+              // If connected, we're good to go
+              if (state === "CONNECTED") {
+                client = reconnectedClient;
+                break;
+              }
+            } catch (stateErr) {
+              // State check might fail if client is still initializing
+            }
+            
+            // Also check if client has info (means it's connected)
             if (reconnectedClient.info && reconnectedClient.info.wid) {
               client = reconnectedClient;
               break;
             }
-            // Also check if client state is READY
-            const state = await reconnectedClient.getState();
-            if (state === "CONNECTED") {
-              client = reconnectedClient;
-              break;
-            }
+            
             await new Promise(resolve => setTimeout(resolve, 500));
             attempts++;
           }
           
-          // If still not ready after waiting, check one more time
+          // Final check - if client has info, use it even if state check failed
           if (!client && reconnectedClient.info && reconnectedClient.info.wid) {
-            client = reconnectedClient;
+            try {
+              const finalState = await reconnectedClient.getState();
+              if (finalState === "CONNECTED" || finalState === "OPENING") {
+                client = reconnectedClient;
+              }
+            } catch {
+              // If we have info, assume it's working
+              client = reconnectedClient;
+            }
           }
         }
       } catch (reconnectErr) {
         console.error(`[Send Now] Failed to reconnect client:`, reconnectErr);
-        // Don't throw yet - check if we have a session in DB
       }
     }
     
-    // If we have a client, verify it's actually ready
+    // If we have a client, verify it's actually working by checking state
     if (client) {
       try {
-        // Check if client is actually connected by checking its state
         const state = await client.getState();
-        if (state !== "CONNECTED") {
-          console.log(`[Send Now] Client state is ${state}, not CONNECTED`);
-          client = null;
-        } else if (!client.info || !client.info.wid) {
-          console.log(`[Send Now] Client exists but has no info`);
+        // Accept CONNECTED or OPENING states (OPENING means it's connecting but might work)
+        if (state === "CONNECTED") {
+          // Perfect, client is connected
+          console.log(`[Send Now] Client is CONNECTED, proceeding to send`);
+        } else if (state === "OPENING" && client.info && client.info.wid) {
+          // Client is opening but has info, might work - give it a try
+          console.log(`[Send Now] Client is OPENING but has info, attempting to use it`);
+        } else {
+          console.log(`[Send Now] Client state is ${state}, not usable`);
           client = null;
         }
       } catch (stateErr) {
-        console.error(`[Send Now] Error checking client state:`, stateErr);
-        client = null;
+        // If state check fails but client has info, assume it's working
+        if (client.info && client.info.wid) {
+          console.log(`[Send Now] State check failed but client has info, proceeding`);
+        } else {
+          console.error(`[Send Now] Error checking client state:`, stateErr);
+          client = null;
+        }
       }
     }
     
-    // If still no client, check DB status and provide helpful error
+    // If still no working client, throw error
     if (!client) {
-      const whatsappSession = await prisma.whatsAppSession.findUnique({
-        where: { userId: user.id },
-        select: { status: true },
-      });
-      
-      if (!whatsappSession) {
-        throw new Error("WhatsApp is not connected. Please go to the WhatsApp page and connect your account.");
-      } else if (whatsappSession.status !== "ready") {
-        throw new Error(`WhatsApp status is "${whatsappSession.status}". Please go to the WhatsApp page and reconnect your account.`);
-      } else {
-        throw new Error("WhatsApp client is not available. Please try reconnecting from the WhatsApp page, or wait a moment and try again.");
-      }
+      throw new Error("WhatsApp client is not available. Please go to the WhatsApp page and make sure it's connected, then try again.");
     }
 
     // Build message - use AI-generated message if available, otherwise use standard format
