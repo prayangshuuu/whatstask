@@ -7,7 +7,7 @@ import ProfileMenu from "./ProfileMenu";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-import { Home, MessageCircle, User, X, Menu, Plus } from "lucide-react";
+import { Home, MessageCircle, User, X, Menu } from "lucide-react";
 
 interface SidebarProps {
   userEmail: string;
@@ -69,21 +69,22 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar with Glassmorphism */}
       <aside
         className={cn(
-          "fixed left-0 top-0 z-50 h-screen w-64 transform border-r border-border bg-card transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "fixed left-0 top-0 z-50 h-screen w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+          "bg-white/80 backdrop-blur-xl border-r border-border/50 shadow-xl",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-5">
+          <div className="flex items-center justify-between border-b border-border/50 px-6 py-5 bg-white/50 backdrop-blur-sm">
             <Link
               href="/app"
               className="flex items-center gap-2 text-xl font-bold text-foreground hover:text-primary transition-colors"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-lg">
                 <MessageCircle className="h-5 w-5 text-primary-foreground" />
               </div>
               <span>WhatsTask</span>
@@ -110,10 +111,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                     asChild
                     variant="ghost"
                     className={cn(
-                      "w-full justify-start gap-3 h-11 text-sm font-medium transition-colors",
+                      "w-full justify-start gap-3 h-11 text-sm font-medium transition-all",
                       active
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm"
-                        : "text-muted-foreground hover:text-foreground hover:bg-wa-hover"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
+                        : "text-muted-foreground hover:text-foreground hover:bg-wa-hover/50"
                     )}
                   >
                     <Link href={item.href}>
@@ -126,10 +127,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             </div>
           </nav>
 
-          <Separator />
+          <Separator className="bg-border/50" />
 
           {/* Profile Menu */}
-          <div className="p-4">
+          <div className="p-4 bg-white/30 backdrop-blur-sm">
             <ProfileMenu email={userEmail} />
           </div>
         </div>
@@ -138,7 +139,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       {/* Mobile Hamburger Button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed left-4 top-4 z-30 lg:hidden shadow-lg"
+        className="fixed left-4 top-4 z-30 lg:hidden shadow-lg backdrop-blur-sm bg-white/90"
         size="icon"
         aria-label="Open menu"
       >

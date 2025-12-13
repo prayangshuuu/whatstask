@@ -2,61 +2,61 @@
 
 @layer base {
   :root {
-    /* WhatsApp Light Theme Colors */
-    --background: 240 11% 96%;
-    /* #f0f2f5 - WhatsApp light background */
-    --foreground: 0 0% 13%;
-    /* #222 - Dark text */
+    /* Modern SaaS Light Theme with High Contrast */
+    --background: 0 0% 100%;
+    /* Pure white for better contrast */
+    --foreground: 0 0% 9%;
+    /* #171717 - Very dark text for high contrast */
 
     --card: 0 0% 100%;
     /* White cards */
-    --card-foreground: 0 0% 13%;
+    --card-foreground: 0 0% 9%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 13%;
+    --popover-foreground: 0 0% 9%;
 
-    /* WhatsApp Green as primary */
-    --primary: 158 64% 52%;
-    /* #25D366 - WhatsApp green */
+    /* WhatsApp Green as primary - enhanced contrast */
+    --primary: 158 100% 40%;
+    /* #00A884 - Brighter WhatsApp green for better visibility */
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 240 4% 95%;
-    /* #f0f0f0 - Light gray */
-    --secondary-foreground: 0 0% 13%;
+    --secondary: 240 5% 96%;
+    /* Slightly darker for better contrast */
+    --secondary-foreground: 0 0% 9%;
 
-    --muted: 240 4% 95%;
-    --muted-foreground: 0 0% 40%;
-    /* #666 - Muted text */
+    --muted: 240 5% 96%;
+    --muted-foreground: 0 0% 45%;
+    /* #737373 - Better contrast for muted text */
 
-    --accent: 240 4% 95%;
-    --accent-foreground: 0 0% 13%;
+    --accent: 240 5% 96%;
+    --accent-foreground: 0 0% 9%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 0 0% 89%;
-    /* #e3e3e3 - Light border */
-    --input: 0 0% 89%;
-    --ring: 158 64% 52%;
-    /* WhatsApp green for focus rings */
+    --border: 0 0% 90%;
+    /* #E5E5E5 - Stronger border for better definition */
+    --input: 0 0% 90%;
+    --ring: 158 100% 40%;
+    /* Primary color for focus rings */
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
-    /* WhatsApp specific light mode */
-    --wa-bg: 240 11% 96%;
-    /* #f0f2f5 */
+    /* WhatsApp specific colors with better contrast */
+    --wa-bg: 240 6% 98%;
+    /* #FAFAFA - Slightly off-white for depth */
     --wa-chat-bg: 0 0% 100%;
     /* White */
-    --wa-hover: 0 0% 93%;
-    /* #ededed - Hover state */
-    --wa-green: 158 64% 52%;
-    /* #25D366 */
-    --wa-green-dark: 159 54% 30%;
-    /* #075E54 - Darker green */
-    --wa-text: 0 0% 13%;
-    /* #222 */
-    --wa-text-secondary: 0 0% 40%;
-    /* #666 */
+    --wa-hover: 240 5% 96%;
+    /* Better hover contrast */
+    --wa-green: 158 100% 40%;
+    /* #00A884 - Brighter green */
+    --wa-green-dark: 159 100% 25%;
+    /* Darker green for depth */
+    --wa-text: 0 0% 9%;
+    /* #171717 - High contrast text */
+    --wa-text-secondary: 0 0% 45%;
+    /* #737373 - Better secondary text contrast */
   }
 }
 
