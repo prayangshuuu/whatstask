@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { generateTodoFromAI, generateAIMessageForTodo } from "@/app/actions/ai";
+import { generateTodoFromAI } from "@/app/actions/ai";
+import { generateMessageForTodo } from "@/app/actions/ai";
 
 interface CreateTodoModalProps {
   isOpen: boolean;
@@ -32,6 +33,7 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
   const [aiMessage, setAiMessage] = useState("");
   const [aiPrompt, setAiPrompt] = useState("");
+  const [generatingMessage, setGeneratingMessage] = useState(false);
 
   const DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -72,6 +74,30 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
     }
   };
 
+  const handleGenerateMessage = async () => {
+    if (!title.trim()) {
+      setError("Please enter a title first");
+      return;
+    }
+
+    setGeneratingMessage(true);
+    setError("");
+
+    try {
+      const { generateMessageForTodo } = await import("@/app/actions/ai");
+      const message = await generateMessageForTodo(
+        title.trim(),
+        description.trim(),
+        repeatType
+      );
+      setAiMessage(message);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate message");
+    } finally {
+      setGeneratingMessage(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
@@ -96,41 +122,37 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
       return;
     }
 
-    // Calculate remindAt date for AI message generation
-    let remindAtDate: Date;
-    if (repeatType === "NONE") {
-      remindAtDate = new Date(remindAt);
-    } else {
-      const [hours, minutes] = timeOfDay.split(":").map(Number);
-      remindAtDate = new Date();
-      remindAtDate.setHours(hours, minutes, 0, 0);
-      if (repeatType === "DAILY" && remindAtDate < new Date()) {
-        remindAtDate.setDate(remindAtDate.getDate() + 1);
+    // Auto-generate message if not provided
+    let finalMessage = aiMessage.trim();
+    if (!finalMessage) {
+      try {
+        setSubmitting(true);
+        const { generateMessageForTodo } = await import("@/app/actions/ai");
+        finalMessage = await generateMessageForTodo(
+          title.trim(),
+          description.trim(),
+          repeatType
+        );
+      } catch (err) {
+        // If AI generation fails, use standard format
+        const repeatLabel =
+          repeatType === "DAILY"
+            ? " (Daily)"
+            : repeatType === "WEEKLY"
+            ? " (Weekly)"
+            : "";
+        finalMessage =
+          "⏰ Reminder: " +
+          title.trim() +
+          repeatLabel +
+          (description.trim() ? "\n\n" + description.trim() : "") +
+          "\n\nSent via WhatsTask";
       }
     }
 
     setSubmitting(true);
-    setError("");
 
     try {
-      // Generate AI message if not provided
-      let finalAiMessage = aiMessage.trim();
-      if (!finalAiMessage) {
-        try {
-          setError("Generating WhatsApp message...");
-          finalAiMessage = await generateAIMessageForTodo({
-            title: title.trim(),
-            description: description.trim(),
-            remindAt: remindAtDate.toISOString(),
-            repeatType,
-          });
-          setAiMessage(finalAiMessage);
-        } catch (err) {
-          console.error("Failed to generate AI message:", err);
-          // Continue with empty message - it will be generated on server side
-        }
-      }
-
       await onSave({
         title: title.trim(),
         description: description.trim(),
@@ -138,7 +160,7 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
         repeatType,
         timeOfDay: repeatType !== "NONE" ? timeOfDay : undefined,
         repeatDays: repeatType === "WEEKLY" ? selectedDays : undefined,
-        aiMessage: finalAiMessage || undefined,
+        aiMessage: finalMessage,
       });
 
       // Reset form
@@ -272,29 +294,36 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
           ) : (
             /* Manual Tab */
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Message to Send Field */}
+              {/* Text to Send Field */}
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-1">
-                  Message to Send (WhatsApp) <span className="text-red-500">*</span>
-                </label>
-                <p className="mb-2 text-xs text-zinc-500 dark:text-zinc-400">
-                  This message will be sent to your notification number. Leave empty to auto-generate with AI.
-                </p>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                    <span className="flex items-center gap-2">
+                      💬 Text to Send (WhatsApp Message)
+                      <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                        (will be sent to your notification number)
+                      </span>
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleGenerateMessage}
+                    disabled={generatingMessage || !title.trim()}
+                    className="text-xs text-[#008069] hover:text-[#00a884] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {generatingMessage ? "Generating..." : "✨ Auto-generate"}
+                  </button>
+                </div>
                 <textarea
                   value={aiMessage}
                   onChange={(e) => setAiMessage(e.target.value)}
                   rows={3}
-                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-[#008069] focus:outline-none focus:ring-2 focus:ring-[#008069] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-[#008069]"
-                  placeholder="Enter your WhatsApp message, or leave empty to auto-generate with AI..."
+                  className="w-full rounded-md border border-zinc-300 px-3 py-2 text-sm text-black shadow-sm focus:border-[#008069] focus:outline-none focus:ring-2 focus:ring-[#008069] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-[#008069]"
+                  placeholder="Enter the message to send via WhatsApp, or click 'Auto-generate' to create one automatically..."
                 />
-                {aiMessage && (
-                  <div className="mt-2 rounded-md border border-green-200 bg-green-50 p-2 dark:border-green-800 dark:bg-green-900/20">
-                    <p className="text-xs font-medium text-green-800 dark:text-green-200 mb-1">
-                      Preview (will be sent to your notification number):
-                    </p>
-                    <p className="text-xs text-green-700 dark:text-green-300">{aiMessage}</p>
-                  </div>
-                )}
+                <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  If left empty, a message will be auto-generated when you save.
+                </p>
               </div>
 
               <div>

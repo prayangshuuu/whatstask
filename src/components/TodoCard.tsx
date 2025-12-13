@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/formatDate";
-import { sendTodoMessageNow } from "@/app/actions/todos";
+import { sendTodoMessageNow } from "@/app/actions/whatsapp";
 
 interface Todo {
   id: string;
@@ -23,9 +23,28 @@ interface TodoCardProps {
 export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [sendError, setSendError] = useState<string | null>(null);
   const [showAITooltip, setShowAITooltip] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [whatsappStatus, setWhatsappStatus] = useState<"ready" | "not-ready" | "checking">("checking");
+  const [sendError, setSendError] = useState<string | null>(null);
+
+  // Check WhatsApp status on mount
+  useEffect(() => {
+    const checkWhatsAppStatus = async () => {
+      try {
+        const response = await fetch("/api/whatsapp/session");
+        if (response.ok) {
+          const data = await response.json();
+          setWhatsappStatus(data.status === "ready" ? "ready" : "not-ready");
+        } else {
+          setWhatsappStatus("not-ready");
+        }
+      } catch (error) {
+        setWhatsappStatus("not-ready");
+      }
+    };
+    checkWhatsAppStatus();
+  }, []);
 
   const handleToggleComplete = async () => {
     try {
@@ -70,17 +89,25 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
   };
 
   const handleSendNow = async () => {
+    if (whatsappStatus !== "ready") {
+      setSendError("WhatsApp is not connected. Please connect WhatsApp first.");
+      setTimeout(() => setSendError(null), 3000);
+      return;
+    }
+
     setIsSending(true);
     setSendError(null);
+
     try {
       await sendTodoMessageNow(todo.id);
-      alert("Message sent successfully!");
+      // Show success briefly
+      setTimeout(() => {
+        setIsSending(false);
+      }, 1000);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : "Failed to send message";
-      setSendError(errorMessage);
-      alert(errorMessage);
-    } finally {
+      setSendError(error instanceof Error ? error.message : "Failed to send message");
       setIsSending(false);
+      setTimeout(() => setSendError(null), 5000);
     }
   };
 
@@ -158,7 +185,7 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
               {showAITooltip && (
                 <div className="absolute bottom-full left-0 mb-2 w-64 rounded-lg border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-[#202c33] z-10">
                   <div className="mb-1 font-semibold text-black dark:text-[#e9edef]">
-                    WhatsApp Message (will be sent to your notification number):
+                    WhatsApp Message (will be sent to notification number):
                   </div>
                   <div className="text-zinc-600 dark:text-[#8696a0]">
                     {todo.aiMessage}
@@ -170,13 +197,20 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
         )}
       </div>
 
+      {/* Error Message */}
+      {sendError && (
+        <div className="mb-2 rounded-md bg-red-50 p-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
+          {sendError}
+        </div>
+      )}
+
       {/* Actions */}
       <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
         <button
           onClick={handleSendNow}
-          disabled={isSending || todo.isCompleted}
+          disabled={isSending || whatsappStatus !== "ready"}
           className="rounded-md bg-[#008069] px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-[#00a884] disabled:cursor-not-allowed disabled:opacity-50"
-          title="Send WhatsApp message now to your notification number"
+          title={whatsappStatus !== "ready" ? "WhatsApp not connected" : "Send message now"}
         >
           {isSending ? "Sending..." : "Send Now"}
         </button>

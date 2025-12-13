@@ -127,56 +127,50 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations.`;
 }
 
 /**
- * Generate AI message for a todo (used when user doesn't provide message in manual mode)
+ * Generate a WhatsApp message for a todo (when user doesn't provide one in manual mode)
  */
-export async function generateAIMessageForTodo(todo: {
-  title: string;
-  description: string;
-  remindAt: string;
-  repeatType: "NONE" | "DAILY" | "WEEKLY";
-}): Promise<string> {
+export async function generateMessageForTodo(
+  title: string,
+  description: string,
+  repeatType: "NONE" | "DAILY" | "WEEKLY"
+): Promise<string> {
   try {
-    // Get current user with API key
     const user = await getCurrentUserWithApiKey();
 
-    // Initialize Google Generative AI
     const genAI = new GoogleGenerativeAI(user.geminiApiKey!);
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Construct prompt
+    const repeatLabel =
+      repeatType === "DAILY"
+        ? " (Daily)"
+        : repeatType === "WEEKLY"
+        ? " (Weekly)"
+        : "";
+
     const prompt = `Generate a friendly, emoji-rich WhatsApp reminder message for this task:
 
-Title: ${todo.title}
-Description: ${todo.description || "No description"}
-Reminder Time: ${new Date(todo.remindAt).toLocaleString()}
-Repeat: ${todo.repeatType === "NONE" ? "One-time" : todo.repeatType === "DAILY" ? "Daily" : "Weekly"}
+Title: ${title}
+Description: ${description || "No description"}
+Repeat: ${repeatType}${repeatLabel}
 
-Return ONLY the message text, no JSON, no markdown, no code blocks, no explanations. Just the message that will be sent via WhatsApp.`;
+Return ONLY the message text, no JSON, no markdown, no code blocks, no explanations. Make it warm, friendly, and include relevant emojis.`;
 
-    // Generate content
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const message = response.text().trim();
-
-    if (!message) {
-      throw new Error("AI returned empty message");
-    }
-
-    return message;
+    return response.text().trim();
   } catch (error) {
-    console.error("[Generate AI Message] Error:", error);
-    // Fallback to standard format if AI generation fails
+    // Fallback to standard format if AI fails
     const repeatLabel =
-      todo.repeatType === "DAILY"
+      repeatType === "DAILY"
         ? " (Daily)"
-        : todo.repeatType === "WEEKLY"
+        : repeatType === "WEEKLY"
         ? " (Weekly)"
         : "";
     return (
       "⏰ Reminder: " +
-      todo.title +
+      title +
       repeatLabel +
-      (todo.description ? "\n\n" + todo.description : "") +
+      (description ? "\n\n" + description : "") +
       "\n\nSent via WhatsTask"
     );
   }
