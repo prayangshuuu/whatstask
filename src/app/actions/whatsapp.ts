@@ -109,7 +109,7 @@ export async function sendTodoMessageNow(todoId: string) {
         if (state === "CONNECTED") {
           // Perfect, client is connected
           console.log(`[Send Now] Client is CONNECTED, proceeding to send`);
-        } else if (state === "OPENING" && client.info && client.info.wid) {
+        } else if (state === "OPENING" && client && client.info && client.info.wid) {
           // Client is opening but has info, might work - give it a try
           console.log(`[Send Now] Client is OPENING but has info, attempting to use it`);
         } else {
@@ -118,7 +118,7 @@ export async function sendTodoMessageNow(todoId: string) {
         }
       } catch (stateErr) {
         // If state check fails but client has info, assume it's working
-        if (client.info && client.info.wid) {
+        if (client && client.info && client.info.wid) {
           console.log(`[Send Now] State check failed but client has info, proceeding`);
         } else {
           console.error(`[Send Now] Error checking client state:`, stateErr);
