@@ -49,41 +49,77 @@ export async function sendTodoMessageNow(todoId: string) {
       throw new Error("Notification number is not set. Please set it in your profile.");
     }
 
-    // Check if WhatsApp session is ready
-    const whatsappSession = await prisma.whatsAppSession.findUnique({
-      where: { userId: user.id },
-      select: { status: true },
-    });
-
-    if (!whatsappSession || whatsappSession.status !== "ready") {
-      throw new Error("WhatsApp is not connected. Please connect WhatsApp first.");
-    }
-
-    // Get WhatsApp client - if not in memory but session is ready, try to reconnect
+    // Try to get WhatsApp client first (might be in memory)
     let client = getWhatsAppClientForUser(user.id);
-    if (!client && whatsappSession.status === "ready") {
-      // Try to start/reconnect the client (it should reconnect using existing LocalAuth session)
+    
+    // If client not in memory, try to reconnect it
+    if (!client) {
       console.log(`[Send Now] Client not in memory, attempting to reconnect for user ${user.id}`);
       try {
         const reconnectedClient = await startWhatsAppClientForUser(user.id);
         if (reconnectedClient) {
-          // Wait a bit for the client to initialize if needed
-          // Check if client is ready (has info)
+          // Wait for the client to initialize and be ready
           let attempts = 0;
-          while (attempts < 10 && (!reconnectedClient.info || !reconnectedClient.info.wid)) {
+          const maxAttempts = 20; // 10 seconds max
+          while (attempts < maxAttempts) {
+            // Check if client has info (means it's connected)
+            if (reconnectedClient.info && reconnectedClient.info.wid) {
+              client = reconnectedClient;
+              break;
+            }
+            // Also check if client state is READY
+            const state = await reconnectedClient.getState();
+            if (state === "CONNECTED") {
+              client = reconnectedClient;
+              break;
+            }
             await new Promise(resolve => setTimeout(resolve, 500));
             attempts++;
           }
-          client = reconnectedClient;
+          
+          // If still not ready after waiting, check one more time
+          if (!client && reconnectedClient.info && reconnectedClient.info.wid) {
+            client = reconnectedClient;
+          }
         }
       } catch (reconnectErr) {
         console.error(`[Send Now] Failed to reconnect client:`, reconnectErr);
-        throw new Error("WhatsApp client is not available. Please reconnect WhatsApp from the WhatsApp page.");
+        // Don't throw yet - check if we have a session in DB
       }
     }
     
+    // If we have a client, verify it's actually ready
+    if (client) {
+      try {
+        // Check if client is actually connected by checking its state
+        const state = await client.getState();
+        if (state !== "CONNECTED") {
+          console.log(`[Send Now] Client state is ${state}, not CONNECTED`);
+          client = null;
+        } else if (!client.info || !client.info.wid) {
+          console.log(`[Send Now] Client exists but has no info`);
+          client = null;
+        }
+      } catch (stateErr) {
+        console.error(`[Send Now] Error checking client state:`, stateErr);
+        client = null;
+      }
+    }
+    
+    // If still no client, check DB status and provide helpful error
     if (!client) {
-      throw new Error("WhatsApp client is not available. Please reconnect WhatsApp from the WhatsApp page.");
+      const whatsappSession = await prisma.whatsAppSession.findUnique({
+        where: { userId: user.id },
+        select: { status: true },
+      });
+      
+      if (!whatsappSession) {
+        throw new Error("WhatsApp is not connected. Please go to the WhatsApp page and connect your account.");
+      } else if (whatsappSession.status !== "ready") {
+        throw new Error(`WhatsApp status is "${whatsappSession.status}". Please go to the WhatsApp page and reconnect your account.`);
+      } else {
+        throw new Error("WhatsApp client is not available. Please try reconnecting from the WhatsApp page, or wait a moment and try again.");
+      }
     }
 
     // Build message - use AI-generated message if available, otherwise use standard format
