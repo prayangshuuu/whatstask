@@ -2,7 +2,7 @@
 
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser } from "@/lib/currentUser";
-import { getWhatsAppClientForUser } from "@/server/whatsappClientManager";
+import { getWhatsAppClientForUser, startWhatsAppClientForUser } from "@/server/whatsappClientManager";
 
 /**
  * Build WhatsApp JID from a raw phone number string.
@@ -59,10 +59,31 @@ export async function sendTodoMessageNow(todoId: string) {
       throw new Error("WhatsApp is not connected. Please connect WhatsApp first.");
     }
 
-    // Get WhatsApp client
-    const client = getWhatsAppClientForUser(user.id);
+    // Get WhatsApp client - if not in memory but session is ready, try to reconnect
+    let client = getWhatsAppClientForUser(user.id);
+    if (!client && whatsappSession.status === "ready") {
+      // Try to start/reconnect the client (it should reconnect using existing LocalAuth session)
+      console.log(`[Send Now] Client not in memory, attempting to reconnect for user ${user.id}`);
+      try {
+        const reconnectedClient = await startWhatsAppClientForUser(user.id);
+        if (reconnectedClient) {
+          // Wait a bit for the client to initialize if needed
+          // Check if client is ready (has info)
+          let attempts = 0;
+          while (attempts < 10 && (!reconnectedClient.info || !reconnectedClient.info.wid)) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+            attempts++;
+          }
+          client = reconnectedClient;
+        }
+      } catch (reconnectErr) {
+        console.error(`[Send Now] Failed to reconnect client:`, reconnectErr);
+        throw new Error("WhatsApp client is not available. Please reconnect WhatsApp from the WhatsApp page.");
+      }
+    }
+    
     if (!client) {
-      throw new Error("WhatsApp client is not available. Please reconnect WhatsApp.");
+      throw new Error("WhatsApp client is not available. Please reconnect WhatsApp from the WhatsApp page.");
     }
 
     // Build message - use AI-generated message if available, otherwise use standard format
