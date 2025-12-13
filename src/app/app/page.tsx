@@ -28,10 +28,21 @@ export default async function AppPage() {
     },
   });
 
+  // Map todos to match the expected interface (handle field name differences)
+  const mappedTodos = todos.map(todo => ({
+    id: todo.id,
+    title: todo.title,
+    description: todo.description,
+    remindAt: todo.remindAt,
+    repeatType: todo.repeatType,
+    isCompleted: todo.isCompleted,
+    aiMessage: (todo as any).aiMessage || (todo as any).aiGeneratedMessage || null,
+  }));
+
   return (
     <div className="space-y-6">
       <DashboardHeader whatsappSession={whatsappSession} />
-      <DashboardTodos todos={todos} />
+      <DashboardTodos todos={mappedTodos} />
     </div>
   );
 }
