@@ -131,14 +131,14 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
   return (
     <Card
       className={cn(
-        "group relative transition-all hover:shadow-lg border-border",
+        "group relative transition-all hover:shadow-lg border-border h-full flex flex-col",
         todo.isCompleted && "opacity-60",
         isDeleting && "opacity-30 pointer-events-none"
       )}
     >
-      <CardContent className="p-5">
+      <CardContent className="p-4 sm:p-5 flex flex-col flex-1">
         {/* Checkbox and Title */}
-        <div className="mb-4 flex items-start gap-3">
+        <div className="mb-3 sm:mb-4 flex items-start gap-3">
           <button
             onClick={handleToggleComplete}
             className={cn(
@@ -155,14 +155,14 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
           <div className="flex-1 min-w-0">
             <h3
               className={cn(
-                "font-semibold text-foreground text-base",
+                "font-semibold text-foreground text-sm sm:text-base leading-tight",
                 todo.isCompleted && "line-through"
               )}
             >
               {todo.title}
             </h3>
             {todo.description && (
-              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+              <p className="mt-1.5 text-xs sm:text-sm text-muted-foreground leading-relaxed line-clamp-2">
                 {todo.description}
               </p>
             )}
@@ -170,14 +170,14 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
         </div>
 
         {/* Meta Info */}
-        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Clock className="h-3.5 w-3.5" />
-            <span>{formatDateTime(todo.remindAt)}</span>
+        <div className="mb-3 sm:mb-4 flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
+          <div className="flex items-center gap-1 sm:gap-1.5 text-muted-foreground">
+            <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
+            <span className="truncate">{formatDateTime(todo.remindAt)}</span>
           </div>
           <span className="text-muted-foreground/50">•</span>
-          <div className="flex items-center gap-1.5 text-muted-foreground">
-            <Repeat className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-1 sm:gap-1.5 text-muted-foreground">
+            <Repeat className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
             <span>{formatRepeatType()}</span>
           </div>
           {todo.aiMessage && (
@@ -186,15 +186,15 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
               <div className="relative">
                 <Badge
                   variant="secondary"
-                  className="cursor-help bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300"
+                  className="cursor-help bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300 text-xs"
                   onMouseEnter={() => setShowAITooltip(true)}
                   onMouseLeave={() => setShowAITooltip(false)}
                 >
                   <Sparkles className="mr-1 h-3 w-3" />
-                  AI Reminder
+                  AI
                 </Badge>
                 {showAITooltip && (
-                  <div className="absolute bottom-full left-0 mb-2 w-72 rounded-lg border border-border bg-card p-3 text-xs shadow-lg z-10">
+                  <div className="absolute bottom-full left-0 mb-2 w-64 sm:w-72 rounded-lg border border-border bg-card p-3 text-xs shadow-lg z-10">
                     <div className="mb-1 font-semibold text-foreground">
                       WhatsApp Message (will be sent to notification number):
                     </div>
@@ -210,44 +210,46 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
 
         {/* Error Message */}
         {sendError && (
-          <div className="mb-3 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive border border-destructive/20">
+          <div className="mb-3 rounded-md bg-destructive/10 p-2 sm:p-2.5 text-xs text-destructive border border-destructive/20">
             <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4" />
-              <span>{sendError}</span>
+              <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+              <span className="break-words">{sendError}</span>
             </div>
           </div>
         )}
 
         {/* Actions */}
-        <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <div className="flex flex-wrap items-center gap-2 mt-auto opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
           <Button
             onClick={handleSendNow}
             disabled={isSending || whatsappStatus !== "ready"}
             size="sm"
-            className="h-8 text-xs"
+            className="h-7 sm:h-8 text-xs flex-1 sm:flex-none"
             title={whatsappStatus !== "ready" ? "WhatsApp not connected" : "Send message now"}
           >
-            <Send className="mr-1.5 h-3.5 w-3.5" />
-            {isSending ? "Sending..." : "Send Now"}
+            <Send className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{isSending ? "Sending..." : "Send Now"}</span>
+            <span className="sm:hidden">{isSending ? "..." : "Send"}</span>
           </Button>
           <Button
             onClick={handleEdit}
             variant="outline"
             size="sm"
-            className="h-8 text-xs"
+            className="h-7 sm:h-8 text-xs flex-1 sm:flex-none"
           >
-            <Edit2 className="mr-1.5 h-3.5 w-3.5" />
-            Edit
+            <Edit2 className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">Edit</span>
           </Button>
           <Button
             onClick={handleDelete}
             disabled={isDeleting}
             variant="destructive"
             size="sm"
-            className="h-8 text-xs"
+            className="h-7 sm:h-8 text-xs flex-1 sm:flex-none"
           >
-            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
-            {isDeleting ? "Deleting..." : "Delete"}
+            <Trash2 className="mr-1 h-3 w-3 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline">{isDeleting ? "Deleting..." : "Delete"}</span>
+            <span className="sm:hidden">Del</span>
           </Button>
         </div>
       </CardContent>

@@ -2,6 +2,11 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 
 interface ProfileData {
   email: string;
@@ -82,7 +87,6 @@ export default function ProfilePage() {
       setGeminiApiKey(data.geminiApiKey || "");
       setSuccess("Profile updated successfully!");
 
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(""), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
@@ -92,130 +96,145 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8 py-8">
-      <div className="border-b border-zinc-200 pb-5 dark:border-zinc-800">
-        <h2 className="text-3xl font-bold text-zinc-900 dark:text-zinc-50">
+    <div className="mx-auto w-full max-w-3xl space-y-6 sm:space-y-8 py-4 sm:py-6 lg:py-8">
+      {/* Header */}
+      <div className="border-b border-border pb-4 sm:pb-5">
+        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
           Settings
         </h2>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-sm sm:text-base text-muted-foreground">
           Manage your account, notifications, and AI preferences.
         </p>
       </div>
 
+      {/* Messages */}
       {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900/50 dark:bg-red-900/20 dark:text-red-400">
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 sm:p-4 text-sm text-destructive">
           {error}
         </div>
       )}
 
       {success && (
-        <div className="rounded-lg border border-green-200 bg-green-50 p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 sm:p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400">
           {success}
         </div>
       )}
 
       {loading ? (
         <div className="animate-pulse space-y-4">
-          <div className="h-32 rounded-lg bg-zinc-100 dark:bg-zinc-800"></div>
-          <div className="h-32 rounded-lg bg-zinc-100 dark:bg-zinc-800"></div>
+          <div className="h-32 rounded-lg bg-muted"></div>
+          <div className="h-32 rounded-lg bg-muted"></div>
         </div>
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 sm:space-y-8">
           {/* Account Section */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Account Details</h3>
-            <div className="mt-4 grid gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg sm:text-xl">Account Details</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                  Email Address
-                </label>
-                <input
+                <Label htmlFor="email">Email Address</Label>
+                <Input
+                  id="email"
                   type="email"
                   value={profile?.email || ""}
                   disabled
-                  className="mt-1 block w-full rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-2.5 text-zinc-500 shadow-sm dark:border-zinc-700 dark:bg-zinc-800/50 dark:text-zinc-400 cursor-not-allowed"
+                  className="mt-1.5 bg-muted cursor-not-allowed"
                 />
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* Notifications Section */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">WhatsApp Notifications</h3>
-            <p className="mt-1 text-sm text-zinc-500">Where should we send your reminders?</p>
-            
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Notification Number
-              </label>
-              <div className="relative mt-1">
-                <input
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg sm:text-xl">WhatsApp Notifications</CardTitle>
+              <CardDescription>Where should we send your reminders?</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="notifyNumber">Notification Number</Label>
+                <Input
+                  id="notifyNumber"
                   type="text"
                   value={notifyNumber}
                   onChange={(e) => setNotifyNumber(e.target.value)}
                   placeholder="e.g. 8801XXXXXXXX"
-                  className="block w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 shadow-sm focus:border-[#008069] focus:ring-[#008069] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-[#008069]"
+                  className="mt-1.5"
                 />
+                <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
+                  Include country code without '+'. This can be different from your connected WhatsApp session.
+                </p>
               </div>
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                Include country code without '+'. This can be different from your connected WhatsApp session.
-              </p>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
           {/* AI Configuration Section */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">AI Configuration</h3>
-              <span className="rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
-                New
-              </span>
-            </div>
-            <p className="mt-1 text-sm text-zinc-500">Enable AI-powered task creation and smart reminders.</p>
-
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Gemini API Key
-              </label>
-              <input
-                type="password"
-                value={geminiApiKey}
-                onChange={(e) => setGeminiApiKey(e.target.value)}
-                placeholder="AIzaSy..."
-                className="mt-1 block w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 shadow-sm focus:border-[#008069] focus:ring-[#008069] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-[#008069]"
-              />
-              <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
-                Get your free key from <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="text-[#008069] hover:underline">Google AI Studio</a>.
-              </p>
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-lg sm:text-xl">AI Configuration</CardTitle>
+                <Badge variant="secondary" className="bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300">
+                  New
+                </Badge>
+              </div>
+              <CardDescription>Enable AI-powered task creation and smart reminders.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="geminiApiKey">Gemini API Key</Label>
+                <Input
+                  id="geminiApiKey"
+                  type="password"
+                  value={geminiApiKey}
+                  onChange={(e) => setGeminiApiKey(e.target.value)}
+                  placeholder="AIzaSy..."
+                  className="mt-1.5"
+                />
+                <p className="mt-2 text-xs sm:text-sm text-muted-foreground">
+                  Get your free key from{" "}
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Google AI Studio
+                  </a>
+                  .
+                </p>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Developer Section */}
-          <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <h3 className="text-lg font-medium text-zinc-900 dark:text-zinc-100">Developer</h3>
-            <div className="mt-4">
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Webhook URL <span className="text-zinc-400 font-normal">(Optional)</span>
-              </label>
-              <input
-                type="url"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                placeholder="https://your-webhook-url.com/endpoint"
-                className="mt-1 block w-full rounded-lg border border-zinc-300 px-4 py-2.5 text-zinc-900 shadow-sm focus:border-[#008069] focus:ring-[#008069] dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-[#008069]"
-              />
-            </div>
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg sm:text-xl">Developer</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div>
+                <Label htmlFor="webhookUrl">
+                  Webhook URL <span className="text-muted-foreground font-normal">(Optional)</span>
+                </Label>
+                <Input
+                  id="webhookUrl"
+                  type="url"
+                  value={webhookUrl}
+                  onChange={(e) => setWebhookUrl(e.target.value)}
+                  placeholder="https://your-webhook-url.com/endpoint"
+                  className="mt-1.5"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-          {/* Sticky Action Bar */}
-          <div className="sticky bottom-6 flex justify-end rounded-xl border border-zinc-200 bg-white/80 p-4 shadow-lg backdrop-blur-md dark:border-zinc-700 dark:bg-zinc-900/80">
-            <button
-              type="submit"
-              disabled={submitting}
-              className="rounded-lg bg-[#008069] px-6 py-2.5 font-medium text-white shadow-sm transition-all hover:bg-[#006d59] hover:shadow-md focus:outline-none focus:ring-4 focus:ring-[#008069]/20 disabled:cursor-not-allowed disabled:opacity-50"
-            >
+          {/* Submit Button */}
+          <div className="flex justify-end pt-4 border-t border-border">
+            <Button type="submit" disabled={submitting} size="lg" className="w-full sm:w-auto">
               {submitting ? "Saving Changes..." : "Save Changes"}
-            </button>
+            </Button>
           </div>
         </form>
       )}

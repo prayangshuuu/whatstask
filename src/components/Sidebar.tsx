@@ -79,7 +79,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border px-6 py-5 bg-white">
+          <div className="flex items-center justify-between border-b border-border px-4 sm:px-6 py-4 sm:py-5 bg-white">
             <Link
               href="/app"
               className="flex items-center gap-2 text-xl font-bold text-foreground hover:text-primary transition-colors"
@@ -100,7 +100,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4 bg-white">
+          <nav className="flex-1 overflow-y-auto px-2 sm:px-3 py-4 bg-white">
             <div className="space-y-1">
               {navItems.map((item) => {
                 const active = isActive(item.href);
@@ -130,7 +130,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           <Separator />
 
           {/* Profile Menu */}
-          <div className="p-4 bg-white">
+          <div className="p-3 sm:p-4 bg-white">
             <ProfileMenu email={userEmail} />
           </div>
         </div>

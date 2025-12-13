@@ -63,14 +63,14 @@ export default function DashboardTodos({ todos: initialTodos }: DashboardTodosPr
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 sm:space-y-10">
       {/* Today */}
       {todayTodos.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-black dark:text-[#e9edef]">
+        <div className="space-y-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-foreground">
             Today
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {todayTodos.map((todo) => (
               <TodoCard key={todo.id} todo={formatTodoForCard(todo)} onUpdate={handleUpdate} />
             ))}
@@ -80,11 +80,11 @@ export default function DashboardTodos({ todos: initialTodos }: DashboardTodosPr
 
       {/* Overdue */}
       {overdueTodos.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-red-600 dark:text-red-400">
+        <div className="space-y-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-destructive">
             Overdue
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {overdueTodos.map((todo) => (
               <TodoCard key={todo.id} todo={formatTodoForCard(todo)} onUpdate={handleUpdate} />
             ))}
@@ -94,11 +94,11 @@ export default function DashboardTodos({ todos: initialTodos }: DashboardTodosPr
 
       {/* Upcoming */}
       {upcomingTodos.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-black dark:text-[#e9edef]">
+        <div className="space-y-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-foreground">
             Upcoming
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {upcomingTodos.map((todo) => (
               <TodoCard key={todo.id} todo={formatTodoForCard(todo)} onUpdate={handleUpdate} />
             ))}
@@ -108,11 +108,11 @@ export default function DashboardTodos({ todos: initialTodos }: DashboardTodosPr
 
       {/* Completed */}
       {completedTodos.length > 0 && (
-        <div>
-          <h2 className="mb-4 text-lg font-semibold text-zinc-500 dark:text-[#8696a0]">
+        <div className="space-y-4">
+          <h2 className="text-lg sm:text-xl font-semibold text-muted-foreground">
             Completed
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-5">
             {completedTodos.map((todo) => (
               <TodoCard key={todo.id} todo={formatTodoForCard(todo)} onUpdate={handleUpdate} />
             ))}
@@ -122,8 +122,8 @@ export default function DashboardTodos({ todos: initialTodos }: DashboardTodosPr
 
       {/* Empty State */}
       {todos.length === 0 && (
-        <div className="rounded-lg border border-zinc-200 bg-white p-12 text-center dark:border-zinc-700 dark:bg-[#202c33]">
-          <p className="text-zinc-500 dark:text-[#8696a0]">
+        <div className="rounded-lg border border-border bg-card p-8 sm:p-12 text-center">
+          <p className="text-sm sm:text-base text-muted-foreground">
             No tasks yet. Create your first task to get started!
           </p>
         </div>
@@ -131,4 +131,3 @@ export default function DashboardTodos({ todos: initialTodos }: DashboardTodosPr
     </div>
   );
 }
-

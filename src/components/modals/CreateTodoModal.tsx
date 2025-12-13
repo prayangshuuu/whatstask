@@ -208,7 +208,7 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto w-[95vw] sm:w-full">
         <DialogHeader>
           <DialogTitle>Create New Todo</DialogTitle>
           <DialogDescription>

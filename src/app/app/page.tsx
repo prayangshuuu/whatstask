@@ -40,7 +40,7 @@ export default async function AppPage() {
   }));
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 sm:space-y-8">
       <DashboardHeader whatsappSession={whatsappSession} />
       <DashboardTodos todos={mappedTodos} />
     </div>

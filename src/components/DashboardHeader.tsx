@@ -51,37 +51,39 @@ export default function DashboardHeader({ whatsappSession }: DashboardHeaderProp
 
   return (
     <>
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold text-foreground">
+      <div className="space-y-6">
+        {/* Title Section */}
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-foreground">
             My Tasks
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-2 text-sm sm:text-base text-muted-foreground">
             Manage your reminders and stay organized
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+        {/* Actions and Status Section */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           {/* WhatsApp Status */}
-          <div className="flex items-center gap-3 rounded-lg border bg-card px-4 py-2.5 w-full sm:w-auto">
+          <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-3 py-2.5 sm:px-4 w-full sm:w-auto">
             {isConnected ? (
               <>
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
                   {profilePic ? (
                     <AvatarImage src={profilePic} alt={displayName} />
                   ) : (
                     <AvatarFallback className="bg-primary text-primary-foreground">
-                      <MessageCircle className="h-5 w-5" />
+                      <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5" />
                     </AvatarFallback>
                   )}
                 </Avatar>
-                <div className="flex flex-col gap-1 min-w-0 flex-1">
+                <div className="flex flex-col gap-0.5 min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="text-sm font-semibold text-foreground truncate">
+                    <span className="text-xs sm:text-sm font-semibold text-foreground truncate">
                       {displayName}
                     </span>
-                    <Badge variant="default" className="h-5 px-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-white mr-1" />
+                    <Badge variant="default" className="h-4 sm:h-5 px-1 sm:px-1.5 text-xs shrink-0">
+                      <span className="h-1 w-1 sm:h-1.5 sm:w-1.5 rounded-full bg-white mr-0.5 sm:mr-1" />
                       Active
                     </Badge>
                   </div>
@@ -92,19 +94,19 @@ export default function DashboardHeader({ whatsappSession }: DashboardHeaderProp
               </>
             ) : (
               <>
-                <Avatar className="h-10 w-10">
+                <Avatar className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
                   <AvatarFallback className="bg-muted">
-                    <MessageCircle className="h-5 w-5 text-muted-foreground" />
+                    <MessageCircle className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
                   </AvatarFallback>
                 </Avatar>
-                <div className="flex flex-col gap-1 flex-1">
-                  <span className="text-sm font-semibold text-muted-foreground">
+                <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                  <span className="text-xs sm:text-sm font-semibold text-muted-foreground">
                     WhatsApp Not Connected
                   </span>
                   <Button
                     asChild
                     variant="link"
-                    className="h-auto p-0 text-xs text-primary"
+                    className="h-auto p-0 text-xs text-primary justify-start"
                   >
                     <a href="/app/whatsapp">
                       Connect now →
@@ -120,17 +122,21 @@ export default function DashboardHeader({ whatsappSession }: DashboardHeaderProp
             <Button
               onClick={() => setShowCreateModal(true)}
               className="flex-1 sm:flex-none"
+              size="default"
             >
-              <Plus className="h-4 w-4" />
-              New Task
+              <Plus className="h-4 w-4 mr-1.5 sm:mr-2" />
+              <span className="hidden xs:inline">New Task</span>
+              <span className="xs:hidden">New</span>
             </Button>
             <Button
               onClick={() => setShowBulkModal(true)}
               variant="secondary"
               className="flex-1 sm:flex-none bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700"
+              size="default"
             >
-              <Sparkles className="h-4 w-4" />
-              Bulk AI
+              <Sparkles className="h-4 w-4 mr-1.5 sm:mr-2" />
+              <span className="hidden xs:inline">Bulk AI</span>
+              <span className="xs:hidden">AI</span>
             </Button>
           </div>
         </div>
