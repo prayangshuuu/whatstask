@@ -245,26 +245,26 @@ export default function WhatsAppPage() {
   };
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <div>
-        <h2 className="text-2xl font-semibold text-black dark:text-zinc-50">
+        <h2 className="text-2xl sm:text-3xl font-bold text-foreground">
           WhatsApp Connection
         </h2>
-        <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
+        <p className="mt-2 text-sm sm:text-base text-muted-foreground">
           Connect your WhatsApp account to receive reminder notifications
         </p>
       </div>
 
       {error && (
-        <div className="rounded-md bg-red-50 p-4 text-sm text-red-800 dark:bg-red-900/20 dark:text-red-400">
-          <div className="flex items-center justify-between">
-            <span>{error}</span>
+        <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-3 sm:p-4 text-sm text-destructive">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-4">
+            <span className="flex-1">{error}</span>
             <button
               onClick={() => {
                 setError("");
                 fetchSession();
               }}
-              className="ml-4 rounded-md bg-red-100 px-3 py-1 text-xs font-medium text-red-800 transition-colors hover:bg-red-200 dark:bg-red-900/40 dark:text-red-300 dark:hover:bg-red-900/60"
+              className="rounded-md bg-destructive/20 px-3 py-1.5 text-xs font-medium text-destructive transition-colors hover:bg-destructive/30 shrink-0"
             >
               Retry
             </button>

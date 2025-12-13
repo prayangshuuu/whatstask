@@ -152,7 +152,7 @@ export default function BulkAIModal({ isOpen, onClose, onSave }: BulkAIModalProp
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-[#202c33]">
+      <div className="relative w-[95vw] sm:w-full max-w-4xl max-h-[90vh] overflow-hidden rounded-lg border border-border bg-card shadow-xl">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
           <h2 className="text-xl font-semibold text-black dark:text-[#e9edef]">
