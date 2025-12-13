@@ -13,7 +13,7 @@ interface TodoAIResponse {
   aiMessage: string; // Friendly WhatsApp reminder message
 }
 
-interface BulkPlanResponse {
+interface BulkTodosResponse {
   tasks: TodoAIResponse[];
 }
 
@@ -125,7 +125,7 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations.`;
 /**
  * Generate multiple todos from user's planning prompt using Gemini AI
  */
-export async function generateBulkPlanFromAI(
+export async function generateTodosFromAI(
   userPrompt: string
 ): Promise<TodoAIResponse[]> {
   try {
@@ -156,7 +156,7 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations.`;
     const text = response.text();
 
     // Parse JSON
-    const parsed: BulkPlanResponse = parseAIResponse(text);
+    const parsed: BulkTodosResponse = parseAIResponse(text);
 
     // Validate it's an object with tasks array
     if (!parsed.tasks || !Array.isArray(parsed.tasks)) {
@@ -200,4 +200,3 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations.`;
     throw new Error("Unknown error occurred during AI generation");
   }
 }
-

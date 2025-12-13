@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { generateBulkPlanFromAI } from "@/app/actions/ai";
 
-interface BulkPlanModalProps {
+interface BulkAIModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onImport: (tasks: Array<{
+  onSave: (tasks: Array<{
     title: string;
     description: string;
     remindAt: string;
@@ -28,7 +28,7 @@ interface ProposedTask {
   selected: boolean;
 }
 
-export default function BulkPlanModal({ isOpen, onClose, onImport }: BulkPlanModalProps) {
+export default function BulkAIModal({ isOpen, onClose, onSave }: BulkAIModalProps) {
   const [bulkPrompt, setBulkPrompt] = useState("");
   const [generating, setGenerating] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -121,7 +121,7 @@ export default function BulkPlanModal({ isOpen, onClose, onImport }: BulkPlanMod
         }
       });
 
-      await onImport(formattedTasks);
+      await onSave(formattedTasks);
 
       // Reset
       setBulkPrompt("");

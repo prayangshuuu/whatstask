@@ -47,6 +47,7 @@ export async function GET() {
         email: true,
         notifyNumber: true,
         webhookUrl: true,
+        geminiApiKey: true,
       },
     });
 
@@ -62,6 +63,7 @@ export async function GET() {
       email: userData.email,
       notifyNumber: userData.notifyNumber,
       webhookUrl: userData.webhookUrl,
+      geminiApiKey: userData.geminiApiKey,
     });
   } catch (error) {
     console.error("Get profile error:", error);
@@ -84,7 +86,7 @@ export async function PATCH(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { notifyNumber, webhookUrl } = body;
+    const { notifyNumber, webhookUrl, geminiApiKey } = body;
 
     // Normalize phone number
     const normalizedNumber = notifyNumber
@@ -119,11 +121,13 @@ export async function PATCH(request: NextRequest) {
       data: {
         notifyNumber: normalizedNumber,
         webhookUrl: normalizedWebhookUrl,
+        geminiApiKey: geminiApiKey,
       },
       select: {
         email: true,
         notifyNumber: true,
         webhookUrl: true,
+        geminiApiKey: true,
       },
     });
 
@@ -136,4 +140,3 @@ export async function PATCH(request: NextRequest) {
     );
   }
 }
-

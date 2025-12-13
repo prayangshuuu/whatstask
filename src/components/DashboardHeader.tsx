@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import CreateTodoModal from "./modals/CreateTodoModal";
-import BulkPlanModal from "./modals/BulkPlanModal";
+import BulkAIModal from "./modals/BulkAIModal";
 import { createTodo, createBulkTodos } from "@/app/actions/todos";
 
 export default function DashboardHeader() {
@@ -24,15 +24,7 @@ export default function DashboardHeader() {
     router.refresh();
   };
 
-  const handleImportTasks = async (tasks: Array<{
-    title: string;
-    description: string;
-    remindAt: string;
-    repeatType: "NONE" | "DAILY" | "WEEKLY";
-    timeOfDay?: string;
-    repeatDays?: string[];
-    aiMessage?: string;
-  }>) => {
+  const handleBulkSave = async (tasks: any[]) => {
     await createBulkTodos(tasks);
     router.refresh();
   };
@@ -59,7 +51,7 @@ export default function DashboardHeader() {
             onClick={() => setShowBulkModal(true)}
             className="rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 text-sm font-medium text-white transition-all hover:from-purple-700 hover:to-pink-700"
           >
-            🤖 AI Plan
+            🤖 Bulk AI
           </button>
         </div>
       </div>
@@ -70,12 +62,11 @@ export default function DashboardHeader() {
         onSave={handleSaveTodo}
       />
 
-      <BulkPlanModal
+      <BulkAIModal
         isOpen={showBulkModal}
         onClose={() => setShowBulkModal(false)}
-        onImport={handleImportTasks}
+        onSave={handleBulkSave}
       />
     </>
   );
 }
-
