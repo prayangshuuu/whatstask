@@ -1,1 +1,153 @@
 @import "tailwindcss";
+
+@layer base {
+  :root {
+    /* WhatsApp Light Theme Colors */
+    --background: 240 11% 96%;
+    /* #f0f2f5 - WhatsApp light background */
+    --foreground: 0 0% 13%;
+    /* #222 - Dark text */
+
+    --card: 0 0% 100%;
+    /* White cards */
+    --card-foreground: 0 0% 13%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 13%;
+
+    /* WhatsApp Green as primary */
+    --primary: 158 64% 52%;
+    /* #25D366 - WhatsApp green */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 240 4% 95%;
+    /* #f0f0f0 - Light gray */
+    --secondary-foreground: 0 0% 13%;
+
+    --muted: 240 4% 95%;
+    --muted-foreground: 0 0% 40%;
+    /* #666 - Muted text */
+
+    --accent: 240 4% 95%;
+    --accent-foreground: 0 0% 13%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 0 0% 89%;
+    /* #e3e3e3 - Light border */
+    --input: 0 0% 89%;
+    --ring: 158 64% 52%;
+    /* WhatsApp green for focus rings */
+
+    --radius: 0.5rem;
+
+    /* WhatsApp specific light mode */
+    --wa-bg: 240 11% 96%;
+    /* #f0f2f5 */
+    --wa-chat-bg: 0 0% 100%;
+    /* White */
+    --wa-hover: 0 0% 93%;
+    /* #ededed - Hover state */
+    --wa-green: 158 64% 52%;
+    /* #25D366 */
+    --wa-green-dark: 159 54% 30%;
+    /* #075E54 - Darker green */
+    --wa-text: 0 0% 13%;
+    /* #222 */
+    --wa-text-secondary: 0 0% 40%;
+    /* #666 */
+  }
+}
+
+/* Base styles */
+* {
+  border-color: hsl(var(--border));
+}
+
+body {
+  background-color: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+
+/* Custom animations */
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-slide-in-bottom {
+  animation: slide-in-from-bottom 0.3s ease-out;
+}
+
+.animate-slide-in-right {
+  animation: slide-in-from-right 0.3s ease-out;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.3s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.2s ease-out;
+}
+
+/* WhatsApp-style scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}

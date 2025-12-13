@@ -11,7 +11,7 @@ interface Todo {
   remindAt: Date | string;
   repeatType: "NONE" | "DAILY" | "WEEKLY";
   isCompleted: boolean;
-  aiMessage?: string | null;
+  aiMessage: string | null;
 }
 
 interface DashboardTodosProps {

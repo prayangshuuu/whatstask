@@ -4,6 +4,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/formatDate";
 import { sendTodoMessageNow } from "@/app/actions/whatsapp";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { Check, Send, Edit2, Trash2, Sparkles, AlertCircle, Clock, Repeat } from "lucide-react";
 
 interface Todo {
   id: string;
@@ -100,7 +105,6 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
 
     try {
       await sendTodoMessageNow(todo.id);
-      // Show success briefly
       setTimeout(() => {
         setIsSending(false);
       }, 1000);
@@ -125,110 +129,128 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
   };
 
   return (
-    <div
-      className={`group relative rounded-lg border border-zinc-200 bg-white p-4 shadow-sm transition-all hover:shadow-md dark:border-zinc-700 dark:bg-[#202c33] ${
-        todo.isCompleted ? "opacity-60" : ""
-      } ${isDeleting ? "opacity-30 pointer-events-none" : ""}`}
-    >
-      {/* Checkbox */}
-      <div className="mb-3 flex items-start gap-3">
-        <button
-          onClick={handleToggleComplete}
-          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all ${
-            todo.isCompleted
-              ? "border-[#008069] bg-[#008069]"
-              : "border-zinc-300 dark:border-zinc-600 hover:border-[#008069]"
-          }`}
-        >
-          {todo.isCompleted && (
-            <svg className="h-3 w-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-            </svg>
-          )}
-        </button>
-        <div className="flex-1 min-w-0">
-          <h3
-            className={`font-semibold text-black dark:text-[#e9edef] ${
-              todo.isCompleted ? "line-through" : ""
-            }`}
-          >
-            {todo.title}
-          </h3>
-          {todo.description && (
-            <p className="mt-1 text-sm text-zinc-500 dark:text-[#8696a0]">
-              {todo.description}
-            </p>
-          )}
-        </div>
-      </div>
-
-      {/* Meta Info */}
-      <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
-        <span className="text-zinc-500 dark:text-[#8696a0]">
-          {formatDateTime(todo.remindAt)}
-        </span>
-        <span className="text-zinc-400 dark:text-[#667781]">•</span>
-        <span className="text-zinc-500 dark:text-[#8696a0]">
-          {formatRepeatType()}
-        </span>
-        {todo.aiMessage && (
-          <>
-            <span className="text-zinc-400 dark:text-[#667781]">•</span>
-            <div className="relative">
-              <button
-                onMouseEnter={() => setShowAITooltip(true)}
-                onMouseLeave={() => setShowAITooltip(false)}
-                className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700 dark:bg-purple-900/30 dark:text-purple-300"
-              >
-                ✨ AI Reminder
-              </button>
-              {showAITooltip && (
-                <div className="absolute bottom-full left-0 mb-2 w-64 rounded-lg border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-[#202c33] z-10">
-                  <div className="mb-1 font-semibold text-black dark:text-[#e9edef]">
-                    WhatsApp Message (will be sent to notification number):
-                  </div>
-                  <div className="text-zinc-600 dark:text-[#8696a0]">
-                    {todo.aiMessage}
-                  </div>
-                </div>
-              )}
-            </div>
-          </>
-        )}
-      </div>
-
-      {/* Error Message */}
-      {sendError && (
-        <div className="mb-2 rounded-md bg-red-50 p-2 text-xs text-red-600 dark:bg-red-900/20 dark:text-red-400">
-          {sendError}
-        </div>
+    <Card
+      className={cn(
+        "group relative transition-all hover:shadow-lg border-border",
+        todo.isCompleted && "opacity-60",
+        isDeleting && "opacity-30 pointer-events-none"
       )}
+    >
+      <CardContent className="p-5">
+        {/* Checkbox and Title */}
+        <div className="mb-4 flex items-start gap-3">
+          <button
+            onClick={handleToggleComplete}
+            className={cn(
+              "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-all",
+              todo.isCompleted
+                ? "border-primary bg-primary"
+                : "border-muted-foreground/30 hover:border-primary"
+            )}
+          >
+            {todo.isCompleted && (
+              <Check className="h-3 w-3 text-primary-foreground" />
+            )}
+          </button>
+          <div className="flex-1 min-w-0">
+            <h3
+              className={cn(
+                "font-semibold text-foreground text-base",
+                todo.isCompleted && "line-through"
+              )}
+            >
+              {todo.title}
+            </h3>
+            {todo.description && (
+              <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                {todo.description}
+              </p>
+            )}
+          </div>
+        </div>
 
-      {/* Actions */}
-      <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-        <button
-          onClick={handleSendNow}
-          disabled={isSending || whatsappStatus !== "ready"}
-          className="rounded-md bg-[#008069] px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-[#00a884] disabled:cursor-not-allowed disabled:opacity-50"
-          title={whatsappStatus !== "ready" ? "WhatsApp not connected" : "Send message now"}
-        >
-          {isSending ? "Sending..." : "Send Now"}
-        </button>
-        <button
-          onClick={handleEdit}
-          className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
-        >
-          Edit
-        </button>
-        <button
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className="rounded-md bg-red-600 px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-red-700 disabled:opacity-50"
-        >
-          {isDeleting ? "Deleting..." : "Delete"}
-        </button>
-      </div>
-    </div>
+        {/* Meta Info */}
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" />
+            <span>{formatDateTime(todo.remindAt)}</span>
+          </div>
+          <span className="text-muted-foreground/50">•</span>
+          <div className="flex items-center gap-1.5 text-muted-foreground">
+            <Repeat className="h-3.5 w-3.5" />
+            <span>{formatRepeatType()}</span>
+          </div>
+          {todo.aiMessage && (
+            <>
+              <span className="text-muted-foreground/50">•</span>
+              <div className="relative">
+                <Badge
+                  variant="secondary"
+                  className="cursor-help bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-900/30 dark:text-purple-300"
+                  onMouseEnter={() => setShowAITooltip(true)}
+                  onMouseLeave={() => setShowAITooltip(false)}
+                >
+                  <Sparkles className="mr-1 h-3 w-3" />
+                  AI Reminder
+                </Badge>
+                {showAITooltip && (
+                  <div className="absolute bottom-full left-0 mb-2 w-72 rounded-lg border border-border bg-card p-3 text-xs shadow-lg z-10">
+                    <div className="mb-1 font-semibold text-foreground">
+                      WhatsApp Message (will be sent to notification number):
+                    </div>
+                    <div className="text-muted-foreground leading-relaxed">
+                      {todo.aiMessage}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {/* Error Message */}
+        {sendError && (
+          <div className="mb-3 rounded-md bg-destructive/10 p-2.5 text-xs text-destructive border border-destructive/20">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>{sendError}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Actions */}
+        <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <Button
+            onClick={handleSendNow}
+            disabled={isSending || whatsappStatus !== "ready"}
+            size="sm"
+            className="h-8 text-xs"
+            title={whatsappStatus !== "ready" ? "WhatsApp not connected" : "Send message now"}
+          >
+            <Send className="mr-1.5 h-3.5 w-3.5" />
+            {isSending ? "Sending..." : "Send Now"}
+          </Button>
+          <Button
+            onClick={handleEdit}
+            variant="outline"
+            size="sm"
+            className="h-8 text-xs"
+          >
+            <Edit2 className="mr-1.5 h-3.5 w-3.5" />
+            Edit
+          </Button>
+          <Button
+            onClick={handleDelete}
+            disabled={isDeleting}
+            variant="destructive"
+            size="sm"
+            className="h-8 text-xs"
+          >
+            <Trash2 className="mr-1.5 h-3.5 w-3.5" />
+            {isDeleting ? "Deleting..." : "Delete"}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
-

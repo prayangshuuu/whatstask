@@ -15,7 +15,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#efeae2] dark:bg-[#0b141a]">
+    <div className="flex h-screen overflow-hidden bg-[#f0f2f5]">
       {/* Sidebar */}
       <Sidebar userEmail={user.email} />
 
