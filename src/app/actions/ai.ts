@@ -70,7 +70,7 @@ export async function generateTodoFromAI(
     const user = await getCurrentUserWithApiKey();
 
     // Initialize Google Generative AI
-    const genAI = new GoogleGenerativeAI(user.geminiApiKey);
+    const genAI = new GoogleGenerativeAI(user.geminiApiKey!);
     const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
     // Construct system prompt
@@ -133,7 +133,7 @@ export async function generateTodosFromAI(
     const user = await getCurrentUserWithApiKey();
 
     // Initialize Google Generative AI
-    const genAI = new GoogleGenerativeAI(user.geminiApiKey);
+    const genAI = new GoogleGenerativeAI(user.geminiApiKey!);
     const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
     // Construct system prompt
