@@ -373,7 +373,7 @@ export default function TodosPage() {
       )}
 
       {/* Create Form */}
-      <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
+      <div data-quick-add className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
         <h3 className="mb-4 text-lg font-semibold text-black dark:text-zinc-50">
           Create New Todo
         </h3>

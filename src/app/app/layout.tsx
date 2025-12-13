@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/currentUser";
-import Link from "next/link";
-import ProfileMenu from "@/components/ProfileMenu";
+import Sidebar from "@/components/Sidebar";
+import QuickAddButton from "@/components/QuickAddButton";
 
 export default async function AppLayout({
   children,
@@ -15,51 +15,19 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="min-h-screen bg-zinc-50 dark:bg-black">
-      <header className="border-b border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-6">
-            <Link
-              href="/app"
-              className="text-xl font-semibold text-black dark:text-zinc-50 hover:opacity-80"
-            >
-              WhatsTask
-            </Link>
-            <nav className="hidden sm:flex items-center gap-4">
-              <Link
-                href="/app/todos"
-                className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors"
-              >
-                Todos
-              </Link>
-              <Link
-                href="/app/whatsapp"
-                className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors"
-              >
-                WhatsApp
-              </Link>
-              <Link
-                href="/app/logs"
-                className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors"
-              >
-                Reminder Logs
-              </Link>
-              <Link
-                href="/app/profile"
-                className="text-sm text-zinc-600 hover:text-black dark:text-zinc-400 dark:hover:text-zinc-50 transition-colors"
-              >
-                Profile
-              </Link>
-            </nav>
-          </div>
-          <div className="flex items-center gap-4">
-            {user && <ProfileMenu email={user.email} />}
-          </div>
+    <div className="flex h-screen overflow-hidden bg-[#efeae2] dark:bg-[#0b141a]">
+      {/* Sidebar */}
+      <Sidebar userEmail={user.email} />
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto lg:ml-64">
+        <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+          {children}
         </div>
-      </header>
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {children}
       </main>
+
+      {/* Quick Add FAB */}
+      <QuickAddButton />
     </div>
   );
 }
