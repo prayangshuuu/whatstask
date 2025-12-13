@@ -208,58 +208,21 @@ export default function CreateTodoModal({ isOpen, onClose, onSave }: CreateTodoM
     onClose();
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop with blur */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={handleClose}
-      />
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Create New Todo</DialogTitle>
+          <DialogDescription>
+            Add a new task with manual input or use AI to generate it from natural language.
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Modal */}
-      <div className="relative w-full max-w-2xl rounded-lg border border-zinc-200 bg-white shadow-xl dark:border-zinc-700 dark:bg-[#202c33]">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4 dark:border-zinc-700">
-          <h2 className="text-xl font-semibold text-black dark:text-[#e9edef]">
-            Create New Todo
-          </h2>
-          <button
-            onClick={handleClose}
-            className="rounded-md p-2 text-zinc-500 hover:bg-zinc-100 hover:text-black dark:text-[#8696a0] dark:hover:bg-zinc-800 dark:hover:text-[#e9edef]"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-
-        {/* Tabs */}
-        <div className="border-b border-zinc-200 px-6 dark:border-zinc-700">
-          <div className="flex gap-2">
-            <button
-              onClick={() => setActiveTab("manual")}
-              className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === "manual"
-                  ? "border-[#008069] text-[#008069]"
-                  : "border-transparent text-zinc-600 hover:text-black dark:text-[#8696a0] dark:hover:text-[#e9edef]"
-              }`}
-            >
-              Manual
-            </button>
-            <button
-              onClick={() => setActiveTab("ai")}
-              className={`border-b-2 px-4 py-3 text-sm font-medium transition-colors ${
-                activeTab === "ai"
-                  ? "border-purple-600 text-purple-600"
-                  : "border-transparent text-zinc-600 hover:text-black dark:text-[#8696a0] dark:hover:text-[#e9edef]"
-              }`}
-            >
-              ✨ AI Assist
-            </button>
-          </div>
-        </div>
+        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "manual" | "ai")} className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="manual">Manual</TabsTrigger>
+            <TabsTrigger value="ai">✨ AI Assist</TabsTrigger>
+          </TabsList>
 
         {/* Content */}
         <div className="max-h-[70vh] overflow-y-auto p-6">
