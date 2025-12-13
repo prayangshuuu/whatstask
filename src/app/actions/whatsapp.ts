@@ -129,9 +129,19 @@ export async function sendTodoMessageNow(todoId: string) {
         } else if (state === "OPENING" && client && client.info && client.info.wid) {
           // Client is opening but has info, might work - give it a try
           console.log(`[Send Now] Client is OPENING but has info, attempting to use it`);
+        } else if (state === null && client && client.info && client.info.wid) {
+          // State is null but client has info - this can happen during initialization
+          // If client has info, it's likely working, so try to use it
+          console.log(`[Send Now] Client state is null but has info, attempting to use it`);
         } else {
-          console.log(`[Send Now] Client state is ${state}, not usable`);
-          client = null;
+          console.log(`[Send Now] Client state is ${state}, checking if we can still use it`);
+          // Even if state check fails, if client has info, try to use it
+          if (client && client.info && client.info.wid) {
+            console.log(`[Send Now] Client has info despite state ${state}, proceeding anyway`);
+          } else {
+            console.log(`[Send Now] Client state is ${state} and no info, not usable`);
+            client = null;
+          }
         }
       } catch (stateErr) {
         // If state check fails but client has info, assume it's working
@@ -139,7 +149,10 @@ export async function sendTodoMessageNow(todoId: string) {
           console.log(`[Send Now] State check failed but client has info, proceeding`);
         } else {
           console.error(`[Send Now] Error checking client state:`, stateErr);
-          client = null;
+          // Don't set client to null if we can't check state - let it try to send
+          if (!client || !client.info) {
+            client = null;
+          }
         }
       }
     }
