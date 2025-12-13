@@ -71,7 +71,7 @@ export async function generateTodoFromAI(
 
     // Initialize Google Generative AI
     const genAI = new GoogleGenerativeAI(user.geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
     // Construct system prompt
     const systemPrompt = `You are a task manager assistant. Extract task details from the user's input. Return a SINGLE JSON object with keys: title (string), description (string), remindAt (ISO string, calculate relative to now), repeatType (enum: NONE, DAILY, WEEKLY), aiMessage (string: a friendly, emoji-rich WhatsApp reminder message for this task).
@@ -134,7 +134,7 @@ export async function generateTodosFromAI(
 
     // Initialize Google Generative AI
     const genAI = new GoogleGenerativeAI(user.geminiApiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
 
     // Construct system prompt
     const systemPrompt = `You are a planning assistant. The user will describe their week or day. Return a JSON Object containing an array named 'tasks'. Each item in the array must follow the structure: { title, description, remindAt, repeatType, aiMessage }.
