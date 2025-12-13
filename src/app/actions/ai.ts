@@ -71,7 +71,7 @@ export async function generateTodoFromAI(
 
     // Initialize Google Generative AI
     const genAI = new GoogleGenerativeAI(user.geminiApiKey!);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Construct system prompt
     const systemPrompt = `You are a task manager assistant. Extract task details from the user's input. Return a SINGLE JSON object with keys: title (string), description (string), remindAt (ISO string, calculate relative to now), repeatType (enum: NONE, DAILY, WEEKLY), aiMessage (string: a friendly, emoji-rich WhatsApp reminder message for this task).
@@ -116,6 +116,10 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations.`;
       throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
     }
     if (error instanceof Error) {
+      // Check for quota/rate limit errors
+      if (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate limit")) {
+        throw new Error("AI quota exceeded. Please check your Google Cloud billing plan or wait a few minutes before trying again. The free tier has daily limits.");
+      }
       throw new Error(`AI generation failed: ${error.message}`);
     }
     throw new Error("Unknown error occurred during AI generation");
@@ -134,7 +138,7 @@ export async function generateTodosFromAI(
 
     // Initialize Google Generative AI
     const genAI = new GoogleGenerativeAI(user.geminiApiKey!);
-    const model = genAI.getGenerativeModel({ model: "gemini-3-pro-preview" });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
     // Construct system prompt
     const systemPrompt = `You are a planning assistant. The user will describe their week or day. Return a JSON Object containing an array named 'tasks'. Each item in the array must follow the structure: { title, description, remindAt, repeatType, aiMessage }.
@@ -195,6 +199,10 @@ Return ONLY valid JSON, no markdown, no code blocks, no explanations.`;
       throw new Error(`Failed to parse AI response as JSON: ${error.message}`);
     }
     if (error instanceof Error) {
+      // Check for quota/rate limit errors
+      if (error.message.includes("429") || error.message.includes("quota") || error.message.includes("rate limit")) {
+        throw new Error("AI quota exceeded. Please check your Google Cloud billing plan or wait a few minutes before trying again. The free tier has daily limits.");
+      }
       throw new Error(`AI generation failed: ${error.message}`);
     }
     throw new Error("Unknown error occurred during AI generation");
