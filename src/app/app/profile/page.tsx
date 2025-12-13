@@ -7,7 +7,6 @@ interface ProfileData {
   email: string;
   notifyNumber: string | null;
   webhookUrl: string | null;
-  geminiApiKey: string | null;
 }
 
 export default function ProfilePage() {
@@ -19,7 +18,6 @@ export default function ProfilePage() {
   const [success, setSuccess] = useState("");
   const [notifyNumber, setNotifyNumber] = useState("");
   const [webhookUrl, setWebhookUrl] = useState("");
-  const [geminiApiKey, setGeminiApiKey] = useState("");
 
   useEffect(() => {
     fetchProfile();
@@ -65,7 +63,6 @@ export default function ProfilePage() {
         body: JSON.stringify({
           notifyNumber: notifyNumber.trim() || null,
           webhookUrl: webhookUrl.trim() || null,
-          geminiApiKey: geminiApiKey.trim() || null,
         }),
       });
 
@@ -78,7 +75,6 @@ export default function ProfilePage() {
       setProfile(data);
       setNotifyNumber(data.notifyNumber || "");
       setWebhookUrl(data.webhookUrl || "");
-      setGeminiApiKey(data.geminiApiKey || "");
       setSuccess("Profile updated successfully!");
 
       // Clear success message after 3 seconds
@@ -167,23 +163,6 @@ export default function ProfilePage() {
               />
               <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
                 When a reminder is sent, we'll POST a JSON payload to this URL. Leave empty to disable webhooks.
-              </p>
-            </div>
-
-            {/* Gemini API Key Field */}
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Gemini API Key <span className="text-zinc-400">(Optional)</span>
-              </label>
-              <input
-                type="password"
-                value={geminiApiKey}
-                onChange={(e) => setGeminiApiKey(e.target.value)}
-                placeholder="Enter your Google Gemini API key"
-                className="mt-1 block w-full rounded-md border border-zinc-300 px-3 py-2 text-black shadow-sm focus:border-black focus:outline-none focus:ring-1 focus:ring-black dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-white dark:focus:ring-white"
-              />
-              <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
-                Your Google Gemini API key for AI-powered features. This key is stored securely and will be used to generate friendly reminder messages.
               </p>
             </div>
 

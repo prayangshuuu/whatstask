@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { title, description, repeatType, remindAt, timeOfDay, repeatDays, aiMessage } =
+    const { title, description, repeatType, remindAt, timeOfDay, repeatDays } =
       validationResult.data;
 
     // Compute remindAt based on repeatType
@@ -90,7 +90,6 @@ export async function POST(request: NextRequest) {
         repeatType: repeatType as RepeatType,
         repeatDays: finalRepeatDays,
         isCompleted: false,
-        aiMessage: aiMessage || null,
       },
     });
 

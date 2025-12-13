@@ -36,8 +36,6 @@ export const todoCreateSchema = z
     timeOfDay: z.string().optional(),
     // For WEEKLY: repeatDays (comma-separated or array)
     repeatDays: z.union([z.string(), z.array(z.string())]).optional().nullable(),
-    // AI-generated WhatsApp message
-    aiMessage: z.string().optional().nullable(),
   })
   .refine(
     (data) => {
