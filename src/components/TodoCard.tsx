@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatDateTime } from "@/lib/formatDate";
+import { sendTodoMessageNow } from "@/app/actions/todos";
 
 interface Todo {
   id: string;
@@ -22,6 +23,8 @@ interface TodoCardProps {
 export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [showAITooltip, setShowAITooltip] = useState(false);
 
   const handleToggleComplete = async () => {
@@ -64,6 +67,21 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
 
   const handleEdit = () => {
     router.push(`/app/todos`);
+  };
+
+  const handleSendNow = async () => {
+    setIsSending(true);
+    setSendError(null);
+    try {
+      await sendTodoMessageNow(todo.id);
+      alert("Message sent successfully!");
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to send message";
+      setSendError(errorMessage);
+      alert(errorMessage);
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const formatRepeatType = () => {
@@ -140,7 +158,7 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
               {showAITooltip && (
                 <div className="absolute bottom-full left-0 mb-2 w-64 rounded-lg border border-zinc-200 bg-white p-3 text-xs shadow-lg dark:border-zinc-700 dark:bg-[#202c33] z-10">
                   <div className="mb-1 font-semibold text-black dark:text-[#e9edef]">
-                    AI-Generated Message:
+                    WhatsApp Message (will be sent to your notification number):
                   </div>
                   <div className="text-zinc-600 dark:text-[#8696a0]">
                     {todo.aiMessage}
@@ -154,6 +172,14 @@ export default function TodoCard({ todo, onUpdate }: TodoCardProps) {
 
       {/* Actions */}
       <div className="flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <button
+          onClick={handleSendNow}
+          disabled={isSending || todo.isCompleted}
+          className="rounded-md bg-[#008069] px-2 py-1 text-xs font-medium text-white transition-colors hover:bg-[#00a884] disabled:cursor-not-allowed disabled:opacity-50"
+          title="Send WhatsApp message now to your notification number"
+        >
+          {isSending ? "Sending..." : "Send Now"}
+        </button>
         <button
           onClick={handleEdit}
           className="rounded-md border border-zinc-300 px-2 py-1 text-xs font-medium text-zinc-700 transition-colors hover:bg-zinc-50 dark:border-zinc-600 dark:text-zinc-300 dark:hover:bg-zinc-800"
