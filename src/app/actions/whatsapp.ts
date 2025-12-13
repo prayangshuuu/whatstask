@@ -25,13 +25,7 @@ export async function sendTodoMessageNow(todoId: string) {
     // Fetch todo with user data
     const todo = await prisma.todo.findUnique({
       where: { id: todoId },
-      select: {
-        id: true,
-        userId: true,
-        title: true,
-        description: true,
-        repeatType: true,
-        aiMessage: true,
+      include: {
         user: {
           select: {
             id: true,
@@ -95,8 +89,9 @@ export async function sendTodoMessageNow(todoId: string) {
     // Build message - use AI-generated message if available, otherwise use standard format
     let message: string;
     
-    if (todo.aiMessage && todo.aiMessage.trim()) {
-      message = todo.aiMessage.trim();
+    const aiMessage = (todo as any).aiMessage as string | null | undefined;
+    if (aiMessage && aiMessage.trim()) {
+      message = aiMessage.trim();
     } else {
       // Fall back to standard format
       const repeatLabel =
