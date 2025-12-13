@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { processDueReminders } from "@/server/reminderProcessor";
+// Import scheduler to auto-start background processing
+import "@/server/reminderScheduler";
 
 /**
  * API route to process due reminders.
