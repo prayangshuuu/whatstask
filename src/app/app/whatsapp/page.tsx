@@ -273,7 +273,7 @@ export default function WhatsAppPage() {
       )}
 
       {success && (
-        <div className="rounded-md bg-green-50 p-4 text-sm text-green-800 dark:bg-green-900/20 dark:text-green-400">
+        <div className="rounded-lg border border-green-200 bg-green-50 p-3 sm:p-4 text-sm text-green-800 dark:border-green-900/50 dark:bg-green-900/20 dark:text-green-400">
           {success}
         </div>
       )}
