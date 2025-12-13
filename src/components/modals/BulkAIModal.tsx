@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { generateBulkPlanFromAI } from "@/app/actions/ai";
+import { generateTodosFromAI } from "@/app/actions/ai";
 
 interface BulkAIModalProps {
   isOpen: boolean;
@@ -45,7 +45,7 @@ export default function BulkAIModal({ isOpen, onClose, onSave }: BulkAIModalProp
     setError("");
 
     try {
-      const results = await generateBulkPlanFromAI(bulkPrompt);
+      const results = await generateTodosFromAI(bulkPrompt);
       setProposedTasks(results.map((task) => ({ data: task, selected: true })));
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to generate plan with AI");
