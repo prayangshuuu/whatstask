@@ -15,15 +15,6 @@ export default async function AppPage() {
   const todos = await prisma.todo.findMany({
     where: { userId: user.id },
     orderBy: { remindAt: "asc" },
-    select: {
-      id: true,
-      title: true,
-      description: true,
-      remindAt: true,
-      repeatType: true,
-      isCompleted: true,
-      aiMessage: true,
-    },
   });
 
   // Fetch WhatsApp session status
