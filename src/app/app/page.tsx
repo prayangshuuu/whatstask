@@ -26,9 +26,20 @@ export default async function AppPage() {
     },
   });
 
+  // Fetch WhatsApp session status
+  const whatsappSession = await prisma.whatsAppSession.findUnique({
+    where: { userId: user.id },
+    select: {
+      status: true,
+      waNumberRaw: true,
+      waDisplayName: true,
+      waProfilePicUrl: true,
+    },
+  });
+
   return (
     <div className="space-y-6">
-      <DashboardHeader />
+      <DashboardHeader whatsappSession={whatsappSession} />
       <DashboardTodos todos={todos} />
     </div>
   );

@@ -58,16 +58,20 @@ export async function sendTodoMessageNow(todoId: string) {
       try {
         const reconnectedClient = await startWhatsAppClientForUser(user.id);
         if (reconnectedClient) {
-          // Wait for the client to initialize and be ready
+          // Wait for the client to initialize and be ready - give it more time
           let attempts = 0;
-          const maxAttempts = 20; // 10 seconds max
+          const maxAttempts = 40; // 20 seconds max (client might need time to reconnect)
           while (attempts < maxAttempts) {
             try {
               const state = await reconnectedClient.getState();
               // If connected, we're good to go
               if (state === "CONNECTED") {
-                client = reconnectedClient;
-                break;
+                // Double check it has info
+                if (reconnectedClient.info && reconnectedClient.info.wid) {
+                  client = reconnectedClient;
+                  console.log(`[Send Now] Client reconnected and ready after ${attempts * 0.5}s`);
+                  break;
+                }
               }
             } catch (stateErr) {
               // State check might fail if client is still initializing
@@ -75,8 +79,19 @@ export async function sendTodoMessageNow(todoId: string) {
             
             // Also check if client has info (means it's connected)
             if (reconnectedClient.info && reconnectedClient.info.wid) {
-              client = reconnectedClient;
-              break;
+              try {
+                const state = await reconnectedClient.getState();
+                if (state === "CONNECTED" || state === "OPENING") {
+                  client = reconnectedClient;
+                  console.log(`[Send Now] Client has info and state is ${state}, using it`);
+                  break;
+                }
+              } catch {
+                // If we have info, assume it's working
+                client = reconnectedClient;
+                console.log(`[Send Now] Client has info, using it despite state check failure`);
+                break;
+              }
             }
             
             await new Promise(resolve => setTimeout(resolve, 500));
@@ -89,10 +104,12 @@ export async function sendTodoMessageNow(todoId: string) {
               const finalState = await reconnectedClient.getState();
               if (finalState === "CONNECTED" || finalState === "OPENING") {
                 client = reconnectedClient;
+                console.log(`[Send Now] Final check: client has info and state is ${finalState}`);
               }
             } catch {
               // If we have info, assume it's working
               client = reconnectedClient;
+              console.log(`[Send Now] Final check: using client with info despite state error`);
             }
           }
         }
