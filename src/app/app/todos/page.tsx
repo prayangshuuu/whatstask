@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/formatDate";
+import { generateTodoFromAI } from "@/app/actions/ai-todo";
 
 interface Todo {
   id: string;
@@ -31,6 +32,13 @@ export default function TodosPage() {
   const [filter, setFilter] = useState<FilterType>("ALL");
   const [hasNotifyNumber, setHasNotifyNumber] = useState<boolean | null>(null);
   
+  // AI mode state
+  const [isAIMode, setIsAIMode] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [aiMessage, setAiMessage] = useState("");
+  
   // Form state
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -57,6 +65,7 @@ export default function TodosPage() {
       if (response.ok) {
         const data = await response.json();
         setHasNotifyNumber(!!data.notifyNumber);
+        setUserId(data.id);
       }
     } catch (err) {
       // Silently fail - this is just a hint
@@ -130,6 +139,11 @@ export default function TodosPage() {
         requestBody.repeatDays = selectedDays;
       }
 
+      // Include aiMessage if present
+      if (aiMessage.trim()) {
+        requestBody.aiMessage = aiMessage.trim();
+      }
+
       const response = await fetch("/api/todos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -152,6 +166,7 @@ export default function TodosPage() {
       setTimeOfDay("");
       setRepeatType("NONE");
       setSelectedDays([]);
+      setAiMessage("");
       
       // Refresh list
       await fetchTodos();
@@ -321,6 +336,58 @@ export default function TodosPage() {
     }
   };
 
+  // Handle AI generation
+  const handleAIGenerate = async () => {
+    if (!aiPrompt.trim()) {
+      setError("Please enter a description of what you need to do");
+      return;
+    }
+
+    if (!userId) {
+      setError("User ID not found. Please refresh the page.");
+      return;
+    }
+
+    setGenerating(true);
+    setError("");
+
+    try {
+      const result = await generateTodoFromAI(userId, aiPrompt);
+      
+      // Populate form fields
+      setTitle(result.title);
+      setDescription(result.description || "");
+      setRepeatType(result.repeat);
+      
+      // Parse remindAt and set appropriate fields
+      const remindAtDate = new Date(result.remindAt);
+      if (result.repeat === "NONE") {
+        setRemindAt(remindAtDate.toISOString().slice(0, 16));
+        setTimeOfDay("");
+      } else {
+        const hours = remindAtDate.getHours().toString().padStart(2, "0");
+        const minutes = remindAtDate.getMinutes().toString().padStart(2, "0");
+        setTimeOfDay(`${hours}:${minutes}`);
+        setRemindAt("");
+        
+        if (result.repeat === "WEEKLY") {
+          // Parse days from remindAt if needed, or leave empty for user to select
+          setSelectedDays([]);
+        }
+      }
+      
+      // Set AI message
+      setAiMessage(result.aiMessage);
+      
+      // Switch to manual mode to show the populated form
+      setIsAIMode(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to generate todo with AI");
+    } finally {
+      setGenerating(false);
+    }
+  };
+
   // Filter todos based on selected filter
   const filteredTodos = todos.filter((todo) => {
     if (filter === "PENDING") {
@@ -374,10 +441,113 @@ export default function TodosPage() {
 
       {/* Create Form */}
       <div className="rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-        <h3 className="mb-4 text-lg font-semibold text-black dark:text-zinc-50">
-          Create New Todo
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-black dark:text-zinc-50">
+            Create New Todo
+          </h3>
+          {/* Tab Toggle */}
+          <div className="flex gap-2 rounded-lg border border-zinc-300 bg-zinc-50 p-1 dark:border-zinc-600 dark:bg-zinc-800">
+            <button
+              type="button"
+              onClick={() => {
+                setIsAIMode(false);
+                setAiPrompt("");
+                setError("");
+              }}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                !isAIMode
+                  ? "bg-white text-black shadow-sm dark:bg-zinc-900 dark:text-zinc-50"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              Manual
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setIsAIMode(true);
+                setError("");
+              }}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                isAIMode
+                  ? "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-sm"
+                  : "text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-200"
+              }`}
+            >
+              ✨ Create with AI
+            </button>
+          </div>
+        </div>
+
+        {isAIMode ? (
+          /* AI Mode */
+          <div className="space-y-4">
+            <div className="rounded-lg border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-6 dark:border-purple-800 dark:from-purple-900/20 dark:to-pink-900/20">
+              <div className="mb-4 flex items-center gap-2">
+                <span className="text-2xl">✨</span>
+                <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100">
+                  AI-Powered Todo Creation
+                </h4>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-purple-800 dark:text-purple-200">
+                  What do you need to do?
+                </label>
+                <textarea
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  placeholder="e.g., 'Remind me to take meds every day at 9am' or 'Call mom next Friday at 2pm'"
+                  rows={4}
+                  className="mt-2 block w-full rounded-md border border-purple-300 bg-white px-3 py-2 text-black shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-purple-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-purple-400 dark:focus:ring-purple-400"
+                />
+                <p className="mt-2 text-xs text-purple-600 dark:text-purple-300">
+                  Describe your task naturally. AI will create the todo with the right timing and details!
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleAIGenerate}
+                disabled={generating || !aiPrompt.trim()}
+                className="w-full rounded-md bg-gradient-to-r from-purple-600 to-pink-600 px-4 py-2 font-medium text-white shadow-md transition-all hover:from-purple-700 hover:to-pink-700 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:from-purple-600 disabled:hover:to-pink-600"
+              >
+                {generating ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Generating...
+                  </span>
+                ) : (
+                  "✨ Generate Todo"
+                )}
+              </button>
+            </div>
+          </div>
+        ) : (
+          /* Manual Mode */
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* AI Message Preview (if generated) */}
+            {aiMessage && (
+              <div className="rounded-lg border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 p-4 dark:border-purple-800 dark:from-purple-900/20 dark:to-pink-900/20">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-lg">💬</span>
+                  <label className="block text-sm font-medium text-purple-800 dark:text-purple-200">
+                    WhatsApp Message Preview
+                  </label>
+                </div>
+                <textarea
+                  value={aiMessage}
+                  onChange={(e) => setAiMessage(e.target.value)}
+                  rows={3}
+                  className="mt-2 block w-full rounded-md border border-purple-300 bg-white px-3 py-2 text-black shadow-sm focus:border-purple-500 focus:outline-none focus:ring-2 focus:ring-purple-500 dark:border-purple-600 dark:bg-zinc-800 dark:text-zinc-50 dark:focus:border-purple-400 dark:focus:ring-purple-400"
+                  placeholder="AI-generated friendly message for WhatsApp..."
+                />
+                <p className="mt-2 text-xs text-purple-600 dark:text-purple-300">
+                  Edit the message that will be sent via WhatsApp. This is optional.
+                </p>
+              </div>
+            )}
           <div>
             <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
               Title <span className="text-red-500">*</span>
@@ -486,14 +656,15 @@ export default function TodosPage() {
             </div>
           )}
 
-          <button
-            type="submit"
-            disabled={submitting}
-            className="rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
-          >
-            {submitting ? "Creating..." : "Create Todo"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-md bg-black px-4 py-2 font-medium text-white transition-colors hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white dark:text-black dark:hover:bg-zinc-200"
+            >
+              {submitting ? "Creating..." : "Create Todo"}
+            </button>
+          </form>
+        )}
       </div>
 
       {/* Todos List */}
