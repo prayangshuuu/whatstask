@@ -15,12 +15,12 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-[#f0f2f5]">
+    <div className="flex h-screen overflow-hidden bg-wa-bg">
       {/* Sidebar */}
       <Sidebar userEmail={user.email} />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-y-auto lg:ml-64">
+      <main className="flex-1 overflow-y-auto lg:ml-64 bg-wa-bg">
         <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
           {children}
         </div>
@@ -31,4 +31,3 @@ export default async function AppLayout({
     </div>
   );
 }
-
