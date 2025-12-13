@@ -16,7 +16,7 @@ export default async function AppLayout({
 
   return (
     <div className="flex h-screen overflow-hidden bg-wa-bg">
-      {/* Sidebar - Fixed with glassmorphism */}
+      {/* Sidebar - Clean SaaS Style */}
       <Sidebar userEmail={user.email} />
 
       {/* Main Content */}

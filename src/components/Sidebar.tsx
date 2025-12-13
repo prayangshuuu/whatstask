@@ -64,30 +64,30 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       {/* Mobile Overlay */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
 
-      {/* Sidebar with Glassmorphism */}
+      {/* Sidebar - Clean SaaS Style */}
       <aside
         className={cn(
           "fixed left-0 top-0 z-50 h-screen w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0",
-          "bg-white/80 backdrop-blur-xl border-r border-border/50 shadow-xl",
+          "bg-white border-r border-border shadow-sm",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
         <div className="flex h-full flex-col">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-border/50 px-6 py-5 bg-white/50 backdrop-blur-sm">
+          <div className="flex items-center justify-between border-b border-border px-6 py-5 bg-white">
             <Link
               href="/app"
               className="flex items-center gap-2 text-xl font-bold text-foreground hover:text-primary transition-colors"
             >
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary shadow-lg">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
                 <MessageCircle className="h-5 w-5 text-primary-foreground" />
               </div>
-              <span>WhatsTask</span>
+              <span className="font-semibold">WhatsTask</span>
             </Link>
             <Button
               variant="ghost"
@@ -100,7 +100,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 overflow-y-auto px-3 py-4">
+          <nav className="flex-1 overflow-y-auto px-3 py-4 bg-white">
             <div className="space-y-1">
               {navItems.map((item) => {
                 const active = isActive(item.href);
@@ -113,8 +113,8 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                     className={cn(
                       "w-full justify-start gap-3 h-11 text-sm font-medium transition-all",
                       active
-                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-md"
-                        : "text-muted-foreground hover:text-foreground hover:bg-wa-hover/50"
+                        ? "bg-primary text-primary-foreground hover:bg-primary/90 shadow-sm font-semibold"
+                        : "text-foreground hover:bg-muted hover:text-foreground"
                     )}
                   >
                     <Link href={item.href}>
@@ -127,10 +127,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             </div>
           </nav>
 
-          <Separator className="bg-border/50" />
+          <Separator />
 
           {/* Profile Menu */}
-          <div className="p-4 bg-white/30 backdrop-blur-sm">
+          <div className="p-4 bg-white">
             <ProfileMenu email={userEmail} />
           </div>
         </div>
@@ -139,7 +139,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       {/* Mobile Hamburger Button */}
       <Button
         onClick={() => setIsOpen(true)}
-        className="fixed left-4 top-4 z-30 lg:hidden shadow-lg backdrop-blur-sm bg-white/90"
+        className="fixed left-4 top-4 z-30 lg:hidden shadow-lg bg-white"
         size="icon"
         aria-label="Open menu"
       >
